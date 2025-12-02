@@ -6,6 +6,7 @@ import Employees from './pages/Employees';
 import Payroll from './pages/Payroll';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { DataProvider } from './context/DataContext';
 
 // Placeholder components for routes not yet implemented
 const Placeholder = ({ title }: { title: string }) => (
@@ -42,9 +43,11 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <Router>
-        <AppContent />
-      </Router>
+      <DataProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </DataProvider>
     </AuthProvider>
   );
 };

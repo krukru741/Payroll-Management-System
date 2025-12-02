@@ -102,8 +102,11 @@ export interface AppUser {
   id: string;
   name: string;
   email: string;
+  username: string; // Added for auth
+  password?: string; // Added for auth mock (hashed in real app)
   role: UserRole;
   avatarUrl: string;
   department?: Department;
   employeeId?: string; // Link to specific employee record for self-service
+  position?: string;
 }

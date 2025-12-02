@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import EmployeeFormModal from '../components/EmployeeFormModal';
-import { MOCK_EMPLOYEES } from '../constants';
 import { Employee, EmployeeStatus } from '../types';
 import { Plus, Search, Filter, MoreHorizontal, Mail, Edit, Trash2, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { getScope, hasPermission } from '../utils/rbac';
 
 const Employees: React.FC = () => {
   const { user } = useAuth();
-  const [employees, setEmployees] = useState<Employee[]>(MOCK_EMPLOYEES);
+  const { employees, addEmployee, updateEmployee, deleteEmployee, loading } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -58,7 +58,7 @@ const Employees: React.FC = () => {
 
   const handleDelete = (id: string) => {
     if (window.confirm('Are you sure you want to delete this employee? This action cannot be undone.')) {
-      setEmployees(prev => prev.filter(emp => emp.id !== id));
+      deleteEmployee(id);
     }
     setActiveMenuId(null);
   };
@@ -70,24 +70,29 @@ const Employees: React.FC = () => {
 
   const handleSubmit = (formData: Omit<Employee, 'id' | 'avatarUrl'>) => {
     if (editingId) {
-      setEmployees(prev => prev.map(emp => 
-        emp.id === editingId 
-          ? { ...emp, ...formData } 
-          : emp
-      ));
+      // Find existing to preserve ID and Avatar
+      const existing = employees.find(e => e.id === editingId);
+      if (existing) {
+        updateEmployee({
+          ...existing,
+          ...formData
+        });
+      }
     } else {
       const newEmployee: Employee = {
         id: `EMP-${Math.floor(Math.random() * 10000).toString().padStart(3, '0')}`,
         ...formData,
-        avatarUrl: `https://picsum.photos/100/100?random=${Math.floor(Math.random() * 1000)}`
+        avatarUrl: `https://ui-avatars.com/api/?name=${formData.firstName}+${formData.lastName}&background=random`
       };
-      setEmployees([newEmployee, ...employees]);
+      addEmployee(newEmployee);
     }
   };
 
   const currentEmployee = editingId 
     ? employees.find(e => e.id === editingId) || null
     : null;
+
+  if (loading) return <div>Loading employees...</div>;
 
   return (
     <div className="space-y-6">

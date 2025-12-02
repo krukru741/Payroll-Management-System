@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import PayslipModal from '../components/PayslipModal';
-import { MOCK_PAYROLL_SUMMARY, MOCK_EMPLOYEES } from '../constants';
 import { processPayrollForEmployee, PayrollResult } from '../utils/payroll';
 import { Employee } from '../types';
 import { 
@@ -19,15 +18,23 @@ import {
   Lock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { getScope, hasPermission } from '../utils/rbac';
 
 const Payroll: React.FC = () => {
   const { user } = useAuth();
+  const { employees, loading } = useData();
   const [selectedPayslip, setSelectedPayslip] = useState<{ emp: Employee, data: PayrollResult } | null>(null);
+
+  // Hardcoded period for demo (In a real app, this comes from a Period Selector)
+  const currentPeriod = {
+    start: '2024-05-01',
+    end: '2024-05-15'
+  };
 
   // Memoize payroll calculations
   const payrollData = useMemo(() => {
-    return MOCK_EMPLOYEES.map(emp => {
+    return employees.map(emp => {
       // Simulate random OT for demo variety
       const otPay = Math.floor(Math.random() * 3000); 
       return {
@@ -35,7 +42,7 @@ const Payroll: React.FC = () => {
         ...processPayrollForEmployee(emp, otPay)
       };
     });
-  }, []);
+  }, [employees]);
 
   // RBAC Filtering
   const scope = user ? getScope(user.role, 'payroll', 'read') : 'none';
@@ -56,12 +63,14 @@ const Payroll: React.FC = () => {
     }), { gross: 0, deductions: 0, net: 0 });
   }, [filteredPayrollData]);
 
+  if (loading) return <div>Loading payroll data...</div>;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Payroll Processing</h2>
-          <p className="text-gray-500 text-sm">Period: {MOCK_PAYROLL_SUMMARY.periodStart} to {MOCK_PAYROLL_SUMMARY.periodEnd}</p>
+          <p className="text-gray-500 text-sm">Period: {currentPeriod.start} to {currentPeriod.end}</p>
         </div>
         <div className="flex gap-3">
             <Button variant="outline">
@@ -216,8 +225,8 @@ const Payroll: React.FC = () => {
         isOpen={!!selectedPayslip} 
         onClose={() => setSelectedPayslip(null)} 
         data={selectedPayslip}
-        periodStart={MOCK_PAYROLL_SUMMARY.periodStart}
-        periodEnd={MOCK_PAYROLL_SUMMARY.periodEnd}
+        periodStart={currentPeriod.start}
+        periodEnd={currentPeriod.end}
       />
     </div>
   );

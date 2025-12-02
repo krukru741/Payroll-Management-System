@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { useAuth, DEV_ACCOUNTS } from '../context/AuthContext';
-import { UserRole } from '../types';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 import RegistrationModal from '../components/RegistrationModal';
-import { Shield, Users, User, Lock, ArrowRight, Eye, EyeOff, UserPlus } from 'lucide-react';
+import { Lock, Eye, EyeOff, UserPlus, AlertTriangle } from 'lucide-react';
 
 const Login: React.FC = () => {
   const { login } = useAuth();
@@ -11,18 +10,24 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleDevLogin = (role: UserRole) => {
-    login(role);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login based on username for non-quick buttons
-    const lowerUser = username.toLowerCase();
-    if (lowerUser.includes('admin')) login(UserRole.ADMIN);
-    else if (lowerUser.includes('hr') || lowerUser.includes('manager')) login(UserRole.MANAGER);
-    else login(UserRole.EMPLOYEE);
+    setError('');
+    setIsLoading(true);
+    
+    try {
+      const success = await login(username, password);
+      if (!success) {
+        setError('Invalid username or password');
+      }
+    } catch (err) {
+      setError('An error occurred during login');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -44,6 +49,19 @@ const Login: React.FC = () => {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-100">
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-red-500" aria-hidden="true" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700">
                 Username
@@ -109,9 +127,13 @@ const Login: React.FC = () => {
             </div>
 
             <div>
-              <Button type="submit" className="w-full flex justify-center">
-                <Lock size={16} className="mr-2" />
-                Sign in
+              <Button type="submit" className="w-full flex justify-center" disabled={isLoading}>
+                {isLoading ? 'Signing in...' : (
+                  <>
+                    <Lock size={16} className="mr-2" />
+                    Sign in
+                  </>
+                )}
               </Button>
             </div>
             
@@ -136,62 +158,11 @@ const Login: React.FC = () => {
                 Create Account
             </Button>
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  Development Quick Access
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 gap-3">
-              <button
-                onClick={() => handleDevLogin(UserRole.ADMIN)}
-                className="w-full inline-flex justify-between items-center px-4 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 group"
-              >
-                <div className="flex items-center">
-                   <Shield className="text-primary-600 mr-3" size={20} />
-                   <div className="text-left">
-                     <span className="block font-bold">Admin</span>
-                     <span className="block text-xs text-gray-500">{DEV_ACCOUNTS[UserRole.ADMIN].email}</span>
-                   </div>
-                </div>
-                <ArrowRight size={16} className="text-gray-400 group-hover:text-primary-500 transition-colors" />
-              </button>
-
-              <button
-                onClick={() => handleDevLogin(UserRole.MANAGER)}
-                className="w-full inline-flex justify-between items-center px-4 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 group"
-              >
-                 <div className="flex items-center">
-                   <Users className="text-secondary-400 text-yellow-600 mr-3" size={20} />
-                   <div className="text-left">
-                     <span className="block font-bold">HR Manager</span>
-                     <span className="block text-xs text-gray-500">{DEV_ACCOUNTS[UserRole.MANAGER].email}</span>
-                   </div>
-                </div>
-                <ArrowRight size={16} className="text-gray-400 group-hover:text-primary-500 transition-colors" />
-              </button>
-
-              <button
-                onClick={() => handleDevLogin(UserRole.EMPLOYEE)}
-                className="w-full inline-flex justify-between items-center px-4 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 group"
-              >
-                 <div className="flex items-center">
-                   <User className="text-gray-500 mr-3" size={20} />
-                   <div className="text-left">
-                     <span className="block font-bold">Employee</span>
-                     <span className="block text-xs text-gray-500">{DEV_ACCOUNTS[UserRole.EMPLOYEE].email}</span>
-                   </div>
-                </div>
-                <ArrowRight size={16} className="text-gray-400 group-hover:text-primary-500 transition-colors" />
-              </button>
-            </div>
+          
+          <div className="mt-6 text-center">
+            <p className="text-xs text-gray-400">
+              Default Admin: <strong>admin</strong> / <strong>password123</strong>
+            </p>
           </div>
         </div>
       </div>

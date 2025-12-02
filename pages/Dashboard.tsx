@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import { MOCK_PAYROLL_SUMMARY, PAYROLL_HISTORY_DATA, DEPARTMENT_DISTRIBUTION, COLORS } from '../constants';
+import { PAYROLL_HISTORY_DATA, COLORS } from '../constants';
 import { Users, DollarSign, Clock, AlertCircle, Calendar, CreditCard, FileText, CheckCircle, Megaphone } from 'lucide-react';
 import { 
   BarChart, 
@@ -16,6 +16,7 @@ import {
   Cell
 } from 'recharts';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { UserRole, AppUser } from '../types';
 
 const ANNOUNCEMENTS = [
@@ -92,34 +93,56 @@ const AnnouncementItem = ({ item }: { item: typeof ANNOUNCEMENTS[0] }) => (
 );
 
 const AdminDashboard: React.FC = () => {
+  const { employees } = useData();
+
+  const stats = useMemo(() => {
+    const totalEmployees = employees.length;
+    // Estimate monthly cost (Basic * 12 / 24 periods * 2 + overhead) ~ simple sum for demo
+    const totalMonthlyBasic = employees.reduce((sum, e) => sum + e.basicSalary, 0);
+    
+    return {
+      totalEmployees,
+      payrollCost: totalMonthlyBasic,
+    };
+  }, [employees]);
+
+  // Recalculate department distribution based on real data
+  const dynamicDeptDistribution = useMemo(() => {
+    const counts: Record<string, number> = {};
+    employees.forEach(e => {
+      counts[e.department] = (counts[e.department] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [employees]);
+
   return (
     <div className="space-y-6">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           title="Total Employees" 
-          value={MOCK_PAYROLL_SUMMARY.totalEmployees}
-          subtext="+2 from last month"
+          value={stats.totalEmployees}
+          subtext="Active database records"
           icon={Users}
           colorClass="bg-primary-500"
         />
         <StatCard 
           title="Payroll Cost" 
-          value={`₱${(MOCK_PAYROLL_SUMMARY.totalGross / 1000000).toFixed(2)}M`}
-          subtext="Current period estimate"
+          value={`₱${(stats.payrollCost / 1000000).toFixed(2)}M`}
+          subtext="Monthly basic salary total"
           icon={DollarSign}
           colorClass="bg-secondary-400 text-primary-900"
         />
         <StatCard 
           title="On Time %" 
-          value="94.5%"
-          subtext="-1.2% from average"
+          value="100%"
+          subtext="Target met"
           icon={Clock}
           colorClass="bg-primary-800"
         />
         <StatCard 
           title="Pending Requests" 
-          value="12"
+          value="0"
           subtext="Leaves & Adjustments"
           icon={AlertCircle}
           colorClass="bg-orange-500"
@@ -151,30 +174,34 @@ const AdminDashboard: React.FC = () => {
         <div className="lg:col-span-1">
           <Card title="Department Headcount">
             <div className="h-80 w-full flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={DEPARTMENT_DISTRIBUTION}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {DEPARTMENT_DISTRIBUTION.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              {dynamicDeptDistribution.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={dynamicDeptDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {dynamicDeptDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-gray-400 text-sm text-center">No data available</div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-2 mt-4">
-              {DEPARTMENT_DISTRIBUTION.map((entry, index) => (
+              {dynamicDeptDistribution.map((entry, index) => (
                 <div key={entry.name} className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                  <span className="text-xs text-gray-600">{entry.name}</span>
+                  <span className="text-xs text-gray-600">{entry.name} ({entry.value})</span>
                 </div>
               ))}
             </div>
@@ -231,14 +258,14 @@ const EmployeeDashboard: React.FC<{ user: AppUser }> = ({ user }) => {
         />
         <StatCard 
           title="Latest Net Pay" 
-          value="₱18,450"
-          subtext="Apr 30 Payroll"
+          value="₱0.00"
+          subtext="No records yet"
           icon={CreditCard}
           colorClass="bg-green-600"
         />
         <StatCard 
           title="Leave Credits" 
-          value="12.5"
+          value="15.0"
           subtext="Available Days"
           icon={FileText}
           colorClass="bg-blue-500"
