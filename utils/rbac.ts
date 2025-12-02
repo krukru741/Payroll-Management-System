@@ -30,9 +30,9 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Module, { [key in Action]?: S
     documents: { create: 'all', read: 'all', delete: 'all' }
   },
   [UserRole.MANAGER]: {
-    employees: { read: 'team' },
+    employees: { create: 'all', read: 'all', update: 'all', delete: 'all' },
     attendance: { create: 'team', read: 'team', update: 'team', delete: 'team' },
-    payroll: { read: 'team' },
+    payroll: { create: 'all', read: 'all', update: 'all', delete: 'all', process: 'all' },
     leave_requests: { read: 'team', approve: 'team' },
     settings: { read: 'all' },
     reports: { read: 'team' },

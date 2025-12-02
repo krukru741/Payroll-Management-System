@@ -16,7 +16,7 @@ import {
   Cell
 } from 'recharts';
 import { useAuth } from '../context/AuthContext';
-import { UserRole } from '../types';
+import { UserRole, AppUser } from '../types';
 
 const ANNOUNCEMENTS = [
   {
@@ -45,7 +45,15 @@ const ANNOUNCEMENTS = [
   }
 ];
 
-const StatCard = ({ title, value, subtext, icon: Icon, colorClass }: any) => (
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  subtext: string;
+  icon: React.ElementType;
+  colorClass: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, subtext, icon: Icon, colorClass }) => (
   <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-start justify-between hover:shadow-md transition-shadow">
     <div>
       <p className="text-sm font-medium text-gray-500">{title}</p>
@@ -100,7 +108,7 @@ const AdminDashboard: React.FC = () => {
           value={`₱${(MOCK_PAYROLL_SUMMARY.totalGross / 1000000).toFixed(2)}M`}
           subtext="Current period estimate"
           icon={DollarSign}
-          colorClass="bg-secondary-400 text-primary-900" // Override icon color for secondary
+          colorClass="bg-secondary-400 text-primary-900"
         />
         <StatCard 
           title="On Time %" 
@@ -193,7 +201,7 @@ const AdminDashboard: React.FC = () => {
   );
 };
 
-const EmployeeDashboard: React.FC<{ user: any }> = ({ user }) => {
+const EmployeeDashboard: React.FC<{ user: AppUser }> = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
