@@ -1,28 +1,25 @@
-
 import React, { useMemo, useState } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import Modal from '../components/Modal';
+import PayslipModal from '../components/PayslipModal';
 import { MOCK_PAYROLL_SUMMARY, MOCK_EMPLOYEES } from '../constants';
 import { processPayrollForEmployee, PayrollResult } from '../utils/payroll';
+import { Employee } from '../types';
 import { 
   Calendar, 
   Download, 
   CheckCircle, 
   AlertCircle,
-  FileText,
   Calculator,
   CreditCard,
   FileOutput,
   BadgePercent,
   ChevronRight,
   Eye,
-  Printer,
-  X
 } from 'lucide-react';
 
 const Payroll: React.FC = () => {
-  const [selectedPayslip, setSelectedPayslip] = useState<{ emp: any, data: PayrollResult } | null>(null);
+  const [selectedPayslip, setSelectedPayslip] = useState<{ emp: Employee, data: PayrollResult } | null>(null);
 
   // Memoize payroll calculations
   const payrollData = useMemo(() => {
@@ -105,7 +102,7 @@ const Payroll: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {payrollData.map(({ emp, grossPay, deductions, netPay }, idx) => (
+                            {payrollData.map(({ emp, grossPay, deductions, netPay }) => (
                                 <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="py-3 px-4">
                                         <div className="font-medium text-gray-900">{emp.lastName}, {emp.firstName}</div>
@@ -188,117 +185,13 @@ const Payroll: React.FC = () => {
         </div>
       </div>
 
-      {/* Payslip Modal */}
-      <Modal 
+      <PayslipModal 
         isOpen={!!selectedPayslip} 
         onClose={() => setSelectedPayslip(null)} 
-        title="Payslip Preview"
-      >
-        {selectedPayslip && (
-          <div className="space-y-6">
-            {/* Payslip Header */}
-            <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-              <div className="flex justify-between items-start border-b border-gray-200 pb-4 mb-4">
-                 <div>
-                    <h2 className="text-lg font-bold text-gray-900">PAYSLIP</h2>
-                    <p className="text-sm text-gray-500">PayrollSys Inc.</p>
-                 </div>
-                 <div className="text-right">
-                    <p className="text-sm font-semibold text-gray-900">Period: {MOCK_PAYROLL_SUMMARY.periodStart} - {MOCK_PAYROLL_SUMMARY.periodEnd}</p>
-                    <p className="text-xs text-gray-500">Date Generated: {new Date().toLocaleDateString()}</p>
-                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm mb-2">
-                <div>
-                   <span className="text-gray-500 block text-xs uppercase tracking-wider">Employee Name</span>
-                   <span className="font-semibold text-gray-900">{selectedPayslip.emp.lastName}, {selectedPayslip.emp.firstName}</span>
-                </div>
-                 <div>
-                   <span className="text-gray-500 block text-xs uppercase tracking-wider">Employee ID</span>
-                   <span className="font-semibold text-gray-900">{selectedPayslip.emp.id}</span>
-                </div>
-                 <div>
-                   <span className="text-gray-500 block text-xs uppercase tracking-wider">Department</span>
-                   <span className="font-medium text-gray-900">{selectedPayslip.emp.department}</span>
-                </div>
-                 <div>
-                   <span className="text-gray-500 block text-xs uppercase tracking-wider">Position</span>
-                   <span className="font-medium text-gray-900">{selectedPayslip.emp.position}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Calculations Grid */}
-            <div className="grid grid-cols-2 gap-8">
-               {/* Earnings */}
-               <div>
-                 <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2 mb-3">Earnings</h4>
-                 <div className="space-y-2 text-sm">
-                   <div className="flex justify-between">
-                     <span className="text-gray-600">Basic Pay (Semi-monthly)</span>
-                     <span className="font-mono text-gray-900">₱{(selectedPayslip.emp.basicSalary / 2).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                   </div>
-                   <div className="flex justify-between">
-                     <span className="text-gray-600">Overtime</span>
-                     <span className="font-mono text-gray-900">₱{(selectedPayslip.data.grossPay - (selectedPayslip.emp.basicSalary / 2)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                   </div>
-                   <div className="flex justify-between pt-2 border-t border-dashed border-gray-200 font-semibold">
-                     <span>Total Earnings</span>
-                     <span>₱{selectedPayslip.data.grossPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                   </div>
-                 </div>
-               </div>
-
-               {/* Deductions */}
-               <div>
-                 <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2 mb-3">Deductions</h4>
-                 <div className="space-y-2 text-sm">
-                   <div className="flex justify-between">
-                     <span className="text-gray-600">SSS</span>
-                     <span className="font-mono text-gray-900">₱{selectedPayslip.data.deductions.sss.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                   </div>
-                   <div className="flex justify-between">
-                     <span className="text-gray-600">PhilHealth</span>
-                     <span className="font-mono text-gray-900">₱{selectedPayslip.data.deductions.philHealth.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                   </div>
-                   <div className="flex justify-between">
-                     <span className="text-gray-600">Pag-IBIG</span>
-                     <span className="font-mono text-gray-900">₱{selectedPayslip.data.deductions.pagIbig.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                   </div>
-                   <div className="flex justify-between">
-                     <span className="text-gray-600">Withholding Tax</span>
-                     <span className="font-mono text-gray-900">₱{selectedPayslip.data.deductions.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                   </div>
-                   <div className="flex justify-between pt-2 border-t border-dashed border-gray-200 font-semibold text-red-600">
-                     <span>Total Deductions</span>
-                     <span>-₱{selectedPayslip.data.deductions.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                   </div>
-                 </div>
-               </div>
-            </div>
-
-            {/* Net Pay */}
-            <div className="bg-primary-900 text-white p-4 rounded-lg flex justify-between items-center shadow-lg">
-               <div>
-                 <span className="block text-primary-200 text-xs uppercase tracking-wider font-semibold">Net Pay</span>
-                 <span className="text-xs opacity-70">Take home pay</span>
-               </div>
-               <div className="text-2xl font-bold">
-                 ₱{selectedPayslip.data.netPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-               </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-               <Button variant="outline" onClick={() => setSelectedPayslip(null)}>Close</Button>
-               <Button onClick={() => window.print()} className="flex items-center gap-2">
-                 <Printer size={16} /> Print Payslip
-               </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+        data={selectedPayslip}
+        periodStart={MOCK_PAYROLL_SUMMARY.periodStart}
+        periodEnd={MOCK_PAYROLL_SUMMARY.periodEnd}
+      />
     </div>
   );
 };

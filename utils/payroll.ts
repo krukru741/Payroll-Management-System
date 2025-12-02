@@ -1,3 +1,4 @@
+import { Employee } from '../types';
 
 export const calculateSSS = (monthlySalary: number): number => {
   // 2024 SSS Contribution Rate: 14% Total (4.5% Employee, 9.5% Employer)
@@ -77,7 +78,7 @@ export interface PayrollResult {
   netPay: number;
 }
 
-export const processPayrollForEmployee = (employee: any, overtimePay: number = 0): PayrollResult => {
+export const processPayrollForEmployee = (employee: Employee, overtimePay: number = 0): PayrollResult => {
   // Assuming Semi-Monthly Payroll (Dividing monthly rates by 2)
   // Real-world systems might deduct statutory only once a month, 
   // but for this demo, we split them evenly.
