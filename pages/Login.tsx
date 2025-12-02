@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { useAuth, DEV_ACCOUNTS } from '../context/AuthContext';
 import { UserRole } from '../types';
 import Button from '../components/Button';
-import { Shield, Users, User, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import RegistrationModal from '../components/RegistrationModal';
+import { Shield, Users, User, Lock, ArrowRight, Eye, EyeOff, UserPlus } from 'lucide-react';
 
 const Login: React.FC = () => {
   const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
 
   const handleDevLogin = (role: UserRole) => {
     login(role);
@@ -112,6 +114,27 @@ const Login: React.FC = () => {
                 Sign in
               </Button>
             </div>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">
+                  New to the platform?
+                </span>
+              </div>
+            </div>
+
+            <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full flex justify-center"
+                onClick={() => setIsRegisterOpen(true)}
+            >
+                <UserPlus size={16} className="mr-2" />
+                Create Account
+            </Button>
           </form>
 
           <div className="mt-6">
@@ -172,6 +195,8 @@ const Login: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      <RegistrationModal isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} />
     </div>
   );
 };

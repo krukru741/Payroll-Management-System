@@ -14,10 +14,43 @@ export enum Department {
   MARKETING = 'Marketing',
 }
 
+export enum UserRole {
+  ADMIN = 'Admin',
+  MANAGER = 'Manager',
+  EMPLOYEE = 'Employee',
+}
+
+export enum Gender {
+  MALE = 'Male',
+  FEMALE = 'Female',
+  OTHER = 'Other',
+}
+
+export enum CivilStatus {
+  SINGLE = 'Single',
+  MARRIED = 'Married',
+  WIDOWED = 'Widowed',
+  SEPARATED = 'Separated',
+}
+
+export interface EmergencyContact {
+  fullName: string;
+  contactNumber: string;
+  relationship: string;
+}
+
+export interface GovernmentIds {
+  sss: string;
+  philHealth: string;
+  pagIbig: string;
+  tin: string;
+}
+
 export interface Employee {
   id: string;
   firstName: string;
   lastName: string;
+  middleName?: string;
   email: string;
   position: string;
   department: Department;
@@ -25,6 +58,20 @@ export interface Employee {
   dateHired: string;
   basicSalary: number;
   avatarUrl: string;
+  
+  // Extended Profile
+  birthDate?: string;
+  age?: number;
+  gender?: Gender;
+  civilStatus?: CivilStatus;
+  address?: string;
+  contactNo?: string;
+  
+  // Government IDs
+  governmentIds?: GovernmentIds;
+  
+  // Emergency Contact
+  emergencyContact?: EmergencyContact;
 }
 
 export interface PayrollSummary {
@@ -49,12 +96,6 @@ export interface NavItem {
   label: string;
   path: string;
   icon: React.ElementType;
-}
-
-export enum UserRole {
-  ADMIN = 'Admin',
-  MANAGER = 'Manager',
-  EMPLOYEE = 'Employee',
 }
 
 export interface AppUser {
