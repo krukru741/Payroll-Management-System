@@ -33,6 +33,18 @@ const ProtectedRoute = ({ children, path }: { children: React.ReactNode, path: s
   return <>{children}</>;
 };
 
+// Define routes for authenticated users to make routing more maintainable
+const protectedRoutes = [
+    { path: "/", component: <Dashboard /> },
+    { path: "/profile", component: <Profile /> },
+    { path: "/employees", component: <Employees /> },
+    { path: "/payroll", component: <Payroll /> },
+    { path: "/attendance", component: <Placeholder title="Attendance" /> },
+    { path: "/reports", component: <Placeholder title="Reports" /> },
+    { path: "/documents", component: <Placeholder title="Documents" /> },
+    { path: "/settings", component: <Placeholder title="Settings" /> },
+];
+
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
 
@@ -43,23 +55,17 @@ const AppContent: React.FC = () => {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
-        
-        {/* Protected Routes based on Role */}
-        <Route path="/employees" element={
-          <ProtectedRoute path="/employees">
-            <Employees />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/payroll" element={<Payroll />} />
-        <Route path="/profile" element={<Profile />} />
-        
-        <Route path="/attendance" element={<Placeholder title="Attendance" />} />
-        <Route path="/reports" element={<Placeholder title="Reports" />} />
-        <Route path="/documents" element={<Placeholder title="Documents" />} />
-        <Route path="/settings" element={<Placeholder title="Settings" />} />
-        
+        {protectedRoutes.map(route => (
+            <Route 
+                key={route.path}
+                path={route.path}
+                element={
+                    <ProtectedRoute path={route.path}>
+                        {route.component}
+                    </ProtectedRoute>
+                }
+            />
+        ))}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

@@ -57,17 +57,43 @@ export const getScope = (role: UserRole, module: Module, action: Action): Scope 
   return PERMISSIONS[role]?.[module]?.[action] || 'none';
 };
 
+// A mapping from routes to their corresponding permission modules.
+const ROUTE_MODULE_MAP: Record<string, Module> = {
+    '/employees': 'employees',
+    '/attendance': 'attendance',
+    '/payroll': 'payroll',
+    '/reports': 'reports',
+    '/documents': 'documents',
+    '/settings': 'settings',
+    '/users': 'users',
+    '/audit-logs': 'audit_logs'
+};
+
+// Routes that are accessible to any authenticated user.
+const PUBLIC_AUTHENTICATED_ROUTES = ['/', '/profile'];
+
 export const canAccessRoute = (role: UserRole, path: string): boolean => {
-  if (role === UserRole.ADMIN) return true;
+    // Admins can access any route.
+    if (role === UserRole.ADMIN) {
+        return true;
+    }
 
-  const restrictedRoutes: Record<string, UserRole[]> = {
-    '/settings': [UserRole.ADMIN, UserRole.MANAGER],
-    '/users': [UserRole.ADMIN],
-    '/audit-logs': [UserRole.ADMIN],
-    '/employees': [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE], // Employee can see self
-  };
+    // Allow access to public authenticated routes.
+    if (PUBLIC_AUTHENTICATED_ROUTES.includes(path)) {
+        return true;
+    }
 
-  const allowedRoles = restrictedRoutes[path];
-  if (!allowedRoles) return true; // Default allow if not restricted
-  return allowedRoles.includes(role);
+    const module = ROUTE_MODULE_MAP[path];
+    
+    // If the route doesn't have an associated module, deny access by default for non-admins.
+    if (!module) {
+        return false;
+    }
+
+    // Check if the user's role has any permissions for this module.
+    const modulePermissions = PERMISSIONS[role]?.[module];
+    
+    // Allow access if there are any permissions defined for the role on this module.
+    // The component itself will handle the fine-grained action/scope checks.
+    return !!modulePermissions && Object.keys(modulePermissions).length > 0;
 };
