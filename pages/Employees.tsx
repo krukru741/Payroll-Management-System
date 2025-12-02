@@ -4,20 +4,37 @@ import Button from '../components/Button';
 import EmployeeFormModal from '../components/EmployeeFormModal';
 import { MOCK_EMPLOYEES } from '../constants';
 import { Employee, EmployeeStatus } from '../types';
-import { Plus, Search, Filter, MoreHorizontal, Mail, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Mail, Edit, Trash2, Lock } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { getScope, hasPermission } from '../utils/rbac';
 
 const Employees: React.FC = () => {
+  const { user } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>(MOCK_EMPLOYEES);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  const filteredEmployees = employees.filter(emp => 
+  // RBAC Filtering
+  const scope = user ? getScope(user.role, 'employees', 'read') : 'none';
+  
+  const accessibleEmployees = employees.filter(emp => {
+    if (scope === 'all') return true;
+    if (scope === 'team') return emp.department === user?.department;
+    if (scope === 'self') return emp.id === user?.employeeId;
+    return false;
+  });
+
+  const filteredEmployees = accessibleEmployees.filter(emp => 
     emp.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.department.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const canCreate = user && hasPermission(user.role, 'employees', 'create');
+  const canUpdate = user && hasPermission(user.role, 'employees', 'update');
+  const canDelete = user && hasPermission(user.role, 'employees', 'delete');
 
   const getStatusColor = (status: EmployeeStatus) => {
     switch (status) {
@@ -53,14 +70,12 @@ const Employees: React.FC = () => {
 
   const handleSubmit = (formData: Omit<Employee, 'id' | 'avatarUrl'>) => {
     if (editingId) {
-      // Update existing employee
       setEmployees(prev => prev.map(emp => 
         emp.id === editingId 
           ? { ...emp, ...formData } 
           : emp
       ));
     } else {
-      // Add new employee
       const newEmployee: Employee = {
         id: `EMP-${Math.floor(Math.random() * 10000).toString().padStart(3, '0')}`,
         ...formData,
@@ -81,10 +96,12 @@ const Employees: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">Employees</h2>
           <p className="text-gray-500 text-sm">Manage your team members and their roles.</p>
         </div>
-        <Button onClick={handleOpenAddModal}>
-          <Plus size={18} className="mr-2" />
-          Add Employee
-        </Button>
+        {canCreate && (
+          <Button onClick={handleOpenAddModal}>
+            <Plus size={18} className="mr-2" />
+            Add Employee
+          </Button>
+        )}
       </div>
 
       <Card className="p-0">
@@ -160,35 +177,41 @@ const Employees: React.FC = () => {
                         <Mail size={16} />
                       </a>
                       
-                      <div className="relative">
-                        <button 
-                          onClick={() => setActiveMenuId(activeMenuId === emp.id ? null : emp.id)}
-                          className={`p-1 rounded transition-colors ${activeMenuId === emp.id ? 'bg-primary-50 text-primary-600' : 'text-gray-400 hover:text-primary-500'}`}
-                        >
-                          <MoreHorizontal size={16} />
-                        </button>
+                      {canUpdate && (
+                        <div className="relative">
+                          <button 
+                            onClick={() => setActiveMenuId(activeMenuId === emp.id ? null : emp.id)}
+                            className={`p-1 rounded transition-colors ${activeMenuId === emp.id ? 'bg-primary-50 text-primary-600' : 'text-gray-400 hover:text-primary-500'}`}
+                          >
+                            <MoreHorizontal size={16} />
+                          </button>
 
-                        {/* Dropdown Menu */}
-                        {activeMenuId === emp.id && (
-                          <>
-                            <div className="fixed inset-0 z-10" onClick={() => setActiveMenuId(null)}></div>
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-20 py-1 text-left">
-                              <button 
-                                onClick={() => handleEdit(emp)}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                              >
-                                <Edit size={14} className="text-gray-500" /> Edit Details
-                              </button>
-                              <button 
-                                onClick={() => handleDelete(emp.id)}
-                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                              >
-                                <Trash2 size={14} className="text-red-500" /> Delete Employee
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
+                          {/* Dropdown Menu */}
+                          {activeMenuId === emp.id && (
+                            <>
+                              <div className="fixed inset-0 z-10" onClick={() => setActiveMenuId(null)}></div>
+                              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-20 py-1 text-left">
+                                <button 
+                                  onClick={() => handleEdit(emp)}
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                  <Edit size={14} className="text-gray-500" /> Edit Details
+                                </button>
+                                {canDelete && (
+                                  <button 
+                                    onClick={() => handleDelete(emp.id)}
+                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                  >
+                                    <Trash2 size={14} className="text-red-500" /> Delete Employee
+                                  </button>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      
+                      {!canUpdate && <Lock size={14} className="text-gray-300" />}
                     </div>
                   </td>
                 </tr>
@@ -206,7 +229,7 @@ const Employees: React.FC = () => {
         
         {/* Pagination placeholder */}
         <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-          <span className="text-sm text-gray-500">Showing {filteredEmployees.length} of {employees.length} results</span>
+          <span className="text-sm text-gray-500">Showing {filteredEmployees.length} of {accessibleEmployees.length} results</span>
           <div className="flex gap-2">
              <Button variant="outline" size="sm" disabled>Previous</Button>
              <Button variant="outline" size="sm">Next</Button>

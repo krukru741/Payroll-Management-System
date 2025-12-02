@@ -16,9 +16,13 @@ import {
   BadgePercent,
   ChevronRight,
   Eye,
+  Lock
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { getScope, hasPermission } from '../utils/rbac';
 
 const Payroll: React.FC = () => {
+  const { user } = useAuth();
   const [selectedPayslip, setSelectedPayslip] = useState<{ emp: Employee, data: PayrollResult } | null>(null);
 
   // Memoize payroll calculations
@@ -33,13 +37,24 @@ const Payroll: React.FC = () => {
     });
   }, []);
 
+  // RBAC Filtering
+  const scope = user ? getScope(user.role, 'payroll', 'read') : 'none';
+  const canProcess = user && hasPermission(user.role, 'payroll', 'process');
+
+  const filteredPayrollData = payrollData.filter(({ emp }) => {
+    if (scope === 'all') return true;
+    if (scope === 'team') return emp.department === user?.department;
+    if (scope === 'self') return emp.id === user?.employeeId;
+    return false;
+  });
+
   const totals = useMemo(() => {
-    return payrollData.reduce((acc, curr) => ({
+    return filteredPayrollData.reduce((acc, curr) => ({
       gross: acc.gross + curr.grossPay,
       deductions: acc.deductions + curr.deductions.total,
       net: acc.net + curr.netPay
     }), { gross: 0, deductions: 0, net: 0 });
-  }, [payrollData]);
+  }, [filteredPayrollData]);
 
   return (
     <div className="space-y-6">
@@ -53,10 +68,17 @@ const Payroll: React.FC = () => {
                 <Download size={18} className="mr-2" />
                 Export Report
             </Button>
-            <Button>
-                <CheckCircle size={18} className="mr-2" />
-                Finalize Payroll
-            </Button>
+            {canProcess ? (
+              <Button>
+                  <CheckCircle size={18} className="mr-2" />
+                  Finalize Payroll
+              </Button>
+            ) : (
+              <Button disabled variant="secondary" className="opacity-50 cursor-not-allowed">
+                  <Lock size={16} className="mr-2" />
+                  Read Only
+              </Button>
+            )}
         </div>
       </div>
 
@@ -102,7 +124,7 @@ const Payroll: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {payrollData.map(({ emp, grossPay, deductions, netPay }) => (
+                            {filteredPayrollData.map(({ emp, grossPay, deductions, netPay, employerContributions }) => (
                                 <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="py-3 px-4">
                                         <div className="font-medium text-gray-900">{emp.lastName}, {emp.firstName}</div>
@@ -118,7 +140,7 @@ const Payroll: React.FC = () => {
                                     </td>
                                     <td className="py-3 px-4 text-right">
                                         <button 
-                                          onClick={() => setSelectedPayslip({ emp, data: { employeeId: emp.id, grossPay, deductions, netPay } })}
+                                          onClick={() => setSelectedPayslip({ emp, data: { employeeId: emp.id, grossPay, deductions, netPay, employerContributions } })}
                                           className="text-gray-400 hover:text-primary-600 transition-colors p-1"
                                           title="View Payslip"
                                         >
@@ -130,6 +152,11 @@ const Payroll: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
+                {filteredPayrollData.length === 0 && (
+                   <div className="p-8 text-center text-gray-500">
+                     You do not have permission to view payroll records or none exist for your scope.
+                   </div>
+                )}
                 <div className="p-4 border-t border-gray-100 text-center">
                     <button className="text-sm text-primary-600 font-medium hover:text-primary-800">View All Entries</button>
                 </div>

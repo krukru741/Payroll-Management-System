@@ -50,3 +50,19 @@ export interface NavItem {
   path: string;
   icon: React.ElementType;
 }
+
+export enum UserRole {
+  ADMIN = 'Admin',
+  MANAGER = 'Manager',
+  EMPLOYEE = 'Employee',
+}
+
+export interface AppUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  avatarUrl: string;
+  department?: Department;
+  employeeId?: string; // Link to specific employee record for self-service
+}

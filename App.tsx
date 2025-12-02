@@ -4,6 +4,8 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Employees from './pages/Employees';
 import Payroll from './pages/Payroll';
+import Login from './pages/Login';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Placeholder components for routes not yet implemented
 const Placeholder = ({ title }: { title: string }) => (
@@ -14,22 +16,36 @@ const Placeholder = ({ title }: { title: string }) => (
   </div>
 );
 
+const AppContent: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/employees" element={<Employees />} />
+        <Route path="/payroll" element={<Payroll />} />
+        <Route path="/attendance" element={<Placeholder title="Attendance" />} />
+        <Route path="/reports" element={<Placeholder title="Reports" />} />
+        <Route path="/documents" element={<Placeholder title="Documents" />} />
+        <Route path="/settings" element={<Placeholder title="Settings" />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Layout>
+  );
+};
+
 const App: React.FC = () => {
   return (
-    <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/employees" element={<Employees />} />
-          <Route path="/payroll" element={<Payroll />} />
-          <Route path="/attendance" element={<Placeholder title="Attendance" />} />
-          <Route path="/reports" element={<Placeholder title="Reports" />} />
-          <Route path="/documents" element={<Placeholder title="Documents" />} />
-          <Route path="/settings" element={<Placeholder title="Settings" />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
   );
 };
 

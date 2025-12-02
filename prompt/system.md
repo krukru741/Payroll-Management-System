@@ -470,7 +470,6 @@ netPay = grossPay - (sss + philhealth + pagibig + withholdingTax + lateDeduction
 | Leave Requests | Approve/Reject | Approve/Reject (team) | Create/Read (self) |
 | Overtime | Approve/Reject | Approve/Reject (team) | Create/Read (self) |
 | Cash Advance | Approve/Reject | Approve/Reject (team) | Create/Read (self) |
-| Loans | Approve/Reject | Approve/Reject (team) | Create/Read (self) |
 | Documents | CRUD | Read (team) | Upload/Read (self) |
 | Reports | Full Access | Team Reports | Personal Reports |
 | Settings | CRUD | Read | None |

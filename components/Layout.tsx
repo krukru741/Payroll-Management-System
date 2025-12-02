@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { NavItem } from '../types';
+import { NavItem, UserRole } from '../types';
 import { NAV_ITEMS } from '../constants';
+import { useAuth } from '../context/AuthContext';
+import { canAccessRoute } from '../utils/rbac';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Bell, Search, User } from 'lucide-react';
+import { Menu, X, Bell, Search, LogOut } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,12 +14,24 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
+
+  // Filter Nav Items based on Role
+  const allowedNavItems = NAV_ITEMS.filter(item => {
+    if (!user) return false;
+    return canAccessRoute(user.role, item.path);
+  });
 
   const handleNavClick = (path: string) => {
     navigate(path);
     setIsMobileMenuOpen(false);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
   return (
@@ -32,7 +46,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-          {NAV_ITEMS.map((item) => (
+          {allowedNavItems.map((item) => (
             <button
               key={item.path}
               onClick={() => handleNavClick(item.path)}
@@ -49,16 +63,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </nav>
 
         <div className="p-4 border-t border-primary-800">
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-primary-800/50">
-            <img 
-              src="https://picsum.photos/40/40" 
-              alt="Admin" 
-              className="w-10 h-10 rounded-full border-2 border-secondary-400"
-            />
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">Jane Doe</span>
-              <span className="text-xs text-gray-400">HR Admin</span>
+          <div className="flex items-center justify-between p-3 rounded-lg bg-primary-800/50">
+            <div className="flex items-center gap-3">
+              <img 
+                src={user?.avatarUrl} 
+                alt="User" 
+                className="w-9 h-9 rounded-full border border-secondary-400"
+              />
+              <div className="flex flex-col overflow-hidden">
+                <span className="text-sm font-medium truncate w-24">{user?.name}</span>
+                <span className="text-xs text-gray-400">{user?.role}</span>
+              </div>
             </div>
+            <button 
+                onClick={handleLogout}
+                className="text-gray-400 hover:text-white transition-colors p-1"
+                title="Sign Out"
+            >
+                <LogOut size={16} />
+            </button>
           </div>
         </div>
       </aside>
@@ -82,7 +105,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </button>
         </div>
         <nav className="px-4 py-2 space-y-2">
-          {NAV_ITEMS.map((item) => (
+          {allowedNavItems.map((item) => (
             <button
               key={item.path}
               onClick={() => handleNavClick(item.path)}
@@ -96,6 +119,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               {item.label}
             </button>
           ))}
+          <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-300 hover:text-white mt-10"
+            >
+              <LogOut size={20} />
+              Sign Out
+            </button>
         </nav>
       </aside>
 
