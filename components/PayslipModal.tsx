@@ -2,8 +2,9 @@ import React from 'react';
 import Modal from './Modal';
 import Button from './Button';
 import { PayrollResult } from '../utils/payroll';
-import { Employee, PayrollSummary } from '../types';
-import { Printer } from 'lucide-react';
+import { Employee } from '../types';
+import { Download } from 'lucide-react';
+import { generatePayslipPDF } from '../utils/export';
 
 interface PayslipModalProps {
   isOpen: boolean;
@@ -17,6 +18,10 @@ const PayslipModal: React.FC<PayslipModalProps> = ({ isOpen, onClose, data, peri
   if (!data) return null;
 
   const { emp, data: result } = data;
+
+  const handleDownloadPDF = () => {
+    generatePayslipPDF(emp, result, { start: periodStart, end: periodEnd });
+  };
 
   return (
     <Modal 
@@ -121,8 +126,8 @@ const PayslipModal: React.FC<PayslipModalProps> = ({ isOpen, onClose, data, peri
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
            <Button variant="outline" onClick={onClose}>Close</Button>
-           <Button onClick={() => window.print()} className="flex items-center gap-2">
-             <Printer size={16} /> Print Payslip
+           <Button onClick={handleDownloadPDF} className="flex items-center gap-2">
+             <Download size={16} /> Download PDF
            </Button>
         </div>
       </div>

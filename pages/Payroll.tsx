@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { getScope, hasPermission } from '../utils/rbac';
+import { exportPayrollToExcel } from '../utils/export';
 
 const Payroll: React.FC = () => {
   const { user } = useAuth();
@@ -63,6 +64,10 @@ const Payroll: React.FC = () => {
     }), { gross: 0, deductions: 0, net: 0 });
   }, [filteredPayrollData]);
 
+  const handleExport = () => {
+    exportPayrollToExcel(filteredPayrollData, currentPeriod);
+  };
+
   if (loading) return <div>Loading payroll data...</div>;
 
   return (
@@ -73,7 +78,7 @@ const Payroll: React.FC = () => {
           <p className="text-gray-500 text-sm">Period: {currentPeriod.start} to {currentPeriod.end}</p>
         </div>
         <div className="flex gap-3">
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExport} disabled={filteredPayrollData.length === 0}>
                 <Download size={18} className="mr-2" />
                 Export Report
             </Button>
