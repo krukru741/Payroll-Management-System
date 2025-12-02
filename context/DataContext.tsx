@@ -1,16 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Employee } from '../types';
-import api from '../lib/axios';
-import { useAuth } from './AuthContext';
 
 interface DataContextType {
   employees: Employee[];
-  addEmployee: (employee: Employee) => Promise<void>;
-  updateEmployee: (employee: Employee) => Promise<void>;
-  deleteEmployee: (id: string) => Promise<void>;
+  addEmployee: (employee: Employee) => void;
+  updateEmployee: (employee: Employee) => void;
+  deleteEmployee: (id: string) => void;
   getEmployeeById: (id: string) => Employee | undefined;
   loading: boolean;
-  refreshData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -18,58 +15,42 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const { isAuthenticated } = useAuth();
-
-  const fetchEmployees = async () => {
-    if (!isAuthenticated) {
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      const response = await api.get('/employees');
-      setEmployees(response.data);
-    } catch (error) {
-      console.error('Failed to fetch employees', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    fetchEmployees();
-  }, [isAuthenticated]);
+    // Load employees from local storage
+    const storedEmployees = localStorage.getItem('payroll_employees');
 
-  const addEmployee = async (employee: Employee) => {
-    try {
-      const response = await api.post('/employees', employee);
-      setEmployees(prev => [...prev, response.data]);
-    } catch (error) {
-      console.error('Failed to add employee', error);
-      throw error;
+    if (storedEmployees) {
+      setEmployees(JSON.parse(storedEmployees));
+    } else {
+      // Initialize empty database
+      setEmployees([]);
+      localStorage.setItem('payroll_employees', JSON.stringify([]));
     }
+    setLoading(false);
+  }, []);
+
+  // Persist to local storage whenever employees change
+  const saveToStorage = (updatedEmployees: Employee[]) => {
+    setEmployees(updatedEmployees);
+    localStorage.setItem('payroll_employees', JSON.stringify(updatedEmployees));
   };
 
-  const updateEmployee = async (updatedEmployee: Employee) => {
-    try {
-      const response = await api.put(`/employees/${updatedEmployee.id}`, updatedEmployee);
-      setEmployees(prev => prev.map(emp => 
-        emp.id === updatedEmployee.id ? response.data : emp
-      ));
-    } catch (error) {
-      console.error('Failed to update employee', error);
-      throw error;
-    }
+  const addEmployee = (employee: Employee) => {
+    const updated = [employee, ...employees];
+    saveToStorage(updated);
   };
 
-  const deleteEmployee = async (id: string) => {
-    try {
-      await api.delete(`/employees/${id}`);
-      setEmployees(prev => prev.filter(emp => emp.id !== id));
-    } catch (error) {
-      console.error('Failed to delete employee', error);
-      throw error;
-    }
+  const updateEmployee = (updatedEmployee: Employee) => {
+    const updated = employees.map(emp => 
+      emp.id === updatedEmployee.id ? updatedEmployee : emp
+    );
+    saveToStorage(updated);
+  };
+
+  const deleteEmployee = (id: string) => {
+    const updated = employees.filter(emp => emp.id !== id);
+    saveToStorage(updated);
   };
 
   const getEmployeeById = (id: string) => {
@@ -83,8 +64,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateEmployee, 
       deleteEmployee, 
       getEmployeeById,
-      loading,
-      refreshData: fetchEmployees
+      loading 
     }}>
       {children}
     </DataContext.Provider>
