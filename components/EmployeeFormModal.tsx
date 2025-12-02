@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import Modal from './Modal';
 import Button from './Button';
-import { Department, EmployeeStatus, Employee } from '../types';
-import { Camera, User, Briefcase, DollarSign } from 'lucide-react';
+import { Department, EmployeeStatus, Employee, Gender, CivilStatus } from '../types';
+import { Camera, User, Briefcase, DollarSign, AlertCircle } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { employeeFormSchema, EmployeeFormData } from '../lib/schemas';
 
 interface EmployeeFormModalProps {
   isOpen: boolean;
@@ -11,54 +14,94 @@ interface EmployeeFormModalProps {
   initialData: Employee | null;
 }
 
-const initialFormState = {
-  firstName: '',
-  lastName: '',
-  email: '',
-  position: '',
-  department: Department.ENGINEERING,
-  status: EmployeeStatus.ACTIVE,
-  dateHired: new Date().toISOString().split('T')[0],
-  basicSalary: 0,
-};
-
 const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
-  const [formData, setFormData] = useState(initialFormState);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+    setValue
+  } = useForm<EmployeeFormData>({
+    resolver: zodResolver(employeeFormSchema),
+    defaultValues: {
+      status: EmployeeStatus.ACTIVE,
+      department: Department.ENGINEERING,
+      gender: Gender.MALE,
+      civilStatus: CivilStatus.SINGLE,
+      basicSalary: 0
+    }
+  });
 
   useEffect(() => {
-    if (initialData) {
-      setFormData({
-        firstName: initialData.firstName,
-        lastName: initialData.lastName,
-        email: initialData.email,
-        position: initialData.position,
-        department: initialData.department,
-        status: initialData.status,
-        dateHired: initialData.dateHired,
-        basicSalary: initialData.basicSalary,
-      });
-    } else {
-      setFormData(initialFormState);
+    if (isOpen) {
+      if (initialData) {
+        reset({
+          firstName: initialData.firstName,
+          lastName: initialData.lastName,
+          middleName: initialData.middleName || '',
+          email: initialData.email,
+          contactNo: initialData.contactNo || '',
+          birthDate: initialData.birthDate || '',
+          age: initialData.age,
+          gender: initialData.gender || Gender.MALE,
+          civilStatus: initialData.civilStatus || CivilStatus.SINGLE,
+          address: initialData.address || '',
+          
+          position: initialData.position,
+          department: initialData.department,
+          status: initialData.status,
+          dateHired: initialData.dateHired,
+          basicSalary: initialData.basicSalary,
+
+          sssNo: initialData.governmentIds?.sss || '',
+          philhealthNo: initialData.governmentIds?.philHealth || '',
+          pagibigNo: initialData.governmentIds?.pagIbig || '',
+          tinNo: initialData.governmentIds?.tin || '',
+
+          ecFullName: initialData.emergencyContact?.fullName || '',
+          ecContactNumber: initialData.emergencyContact?.contactNumber || '',
+          ecRelationship: initialData.emergencyContact?.relationship || '',
+        });
+      } else {
+        reset({
+          status: EmployeeStatus.ACTIVE,
+          department: Department.ENGINEERING,
+          dateHired: new Date().toISOString().split('T')[0],
+          basicSalary: 0
+        });
+      }
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, reset]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'basicSalary' ? (value === '' ? 0 : parseFloat(value)) : value
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
+  const onFormSubmit = (data: EmployeeFormData) => {
+    // Transform flat form data back to nested structure if needed by onSubmit
+    // For now we pass individual fields and let the parent handle structure or
+    // we adapt here. The parent Employees.tsx expects a flattened structure 
+    // but the Employee type has nested objects.
+    
+    // Constructing the object to match Employee interface structure
+    const payload: any = {
+      ...data,
+      governmentIds: {
+        sss: data.sssNo,
+        philHealth: data.philhealthNo,
+        pagIbig: data.pagibigNo,
+        tin: data.tinNo
+      },
+      emergencyContact: {
+        fullName: data.ecFullName,
+        contactNumber: data.ecContactNumber,
+        relationship: data.ecRelationship
+      }
+    };
+    
+    onSubmit(payload);
     onClose();
   };
 
   const currentAvatar = initialData 
     ? initialData.avatarUrl 
-    : `https://ui-avatars.com/api/?name=${formData.firstName}+${formData.lastName}&background=0D8ABC&color=fff`;
+    : `https://ui-avatars.com/api/?background=random&color=fff&name=New+User`;
 
   return (
     <Modal 
@@ -66,7 +109,7 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ isOpen, onClose, 
       onClose={onClose} 
       title={initialData ? "Edit Employee Details" : "New Employee Registration"}
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
         {/* Profile Photo Section */}
         <div className="flex items-center gap-5 p-4 bg-gray-50 rounded-lg border border-gray-100">
           <div className="relative">
@@ -94,40 +137,19 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ isOpen, onClose, 
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">First Name</label>
-              <input
-                type="text"
-                name="firstName"
-                required
-                placeholder="e.g. John"
-                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm"
-                value={formData.firstName}
-                onChange={handleInputChange}
-              />
+              <label className="label-text">First Name *</label>
+              <input {...register('firstName')} className={`input-field ${errors.firstName ? 'border-red-500' : ''}`} placeholder="e.g. John" />
+              {errors.firstName && <span className="text-xs text-red-500 mt-1">{errors.firstName.message}</span>}
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Last Name</label>
-              <input
-                type="text"
-                name="lastName"
-                required
-                placeholder="e.g. Doe"
-                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm"
-                value={formData.lastName}
-                onChange={handleInputChange}
-              />
+              <label className="label-text">Last Name *</label>
+              <input {...register('lastName')} className={`input-field ${errors.lastName ? 'border-red-500' : ''}`} placeholder="e.g. Doe" />
+              {errors.lastName && <span className="text-xs text-red-500 mt-1">{errors.lastName.message}</span>}
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Email Address</label>
-              <input
-                type="email"
-                name="email"
-                required
-                placeholder="john.doe@company.com"
-                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm"
-                value={formData.email}
-                onChange={handleInputChange}
-              />
+              <label className="label-text">Email Address *</label>
+              <input {...register('email')} className={`input-field ${errors.email ? 'border-red-500' : ''}`} placeholder="john.doe@company.com" />
+              {errors.email && <span className="text-xs text-red-500 mt-1">{errors.email.message}</span>}
             </div>
           </div>
         </div>
@@ -141,27 +163,15 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ isOpen, onClose, 
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Position</label>
-              <input
-                type="text"
-                name="position"
-                required
-                placeholder="e.g. Software Engineer"
-                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm"
-                value={formData.position}
-                onChange={handleInputChange}
-              />
+              <label className="label-text">Position *</label>
+              <input {...register('position')} className={`input-field ${errors.position ? 'border-red-500' : ''}`} placeholder="e.g. Software Engineer" />
+              {errors.position && <span className="text-xs text-red-500 mt-1">{errors.position.message}</span>}
             </div>
             
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Department</label>
+              <label className="label-text">Department *</label>
               <div className="relative">
-                <select
-                  name="department"
-                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm appearance-none"
-                  value={formData.department}
-                  onChange={handleInputChange}
-                >
+                <select {...register('department')} className="input-field appearance-none">
                   {Object.values(Department).map(dept => (
                     <option key={dept} value={dept}>{dept}</option>
                   ))}
@@ -173,26 +183,15 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ isOpen, onClose, 
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Date Hired</label>
-              <input
-                type="date"
-                name="dateHired"
-                required
-                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm"
-                value={formData.dateHired}
-                onChange={handleInputChange}
-              />
+              <label className="label-text">Date Hired *</label>
+              <input type="date" {...register('dateHired')} className={`input-field ${errors.dateHired ? 'border-red-500' : ''}`} />
+              {errors.dateHired && <span className="text-xs text-red-500 mt-1">{errors.dateHired.message}</span>}
             </div>
 
              <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
+              <label className="label-text">Status *</label>
               <div className="relative">
-                <select
-                  name="status"
-                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm appearance-none"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                >
+                <select {...register('status')} className="input-field appearance-none">
                   {Object.values(EmployeeStatus).map(status => (
                     <option key={status} value={status}>{status}</option>
                   ))}
@@ -213,30 +212,53 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ isOpen, onClose, 
           </div>
           
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Basic Monthly Salary</label>
+            <label className="label-text">Basic Monthly Salary *</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">₱</span>
               <input
                 type="number"
-                name="basicSalary"
-                min="0"
                 step="0.01"
-                required
+                {...register('basicSalary', { valueAsNumber: true })}
+                className={`input-field pl-8 font-mono ${errors.basicSalary ? 'border-red-500' : ''}`}
                 placeholder="0.00"
-                className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm font-mono"
-                value={formData.basicSalary || ''}
-                onChange={handleInputChange}
               />
             </div>
+            {errors.basicSalary && <span className="text-xs text-red-500 mt-1">{errors.basicSalary.message}</span>}
             <p className="text-xs text-gray-400 mt-1">This amount is used for tax and contribution calculations.</p>
           </div>
         </div>
 
         <div className="pt-6 flex justify-end gap-3 border-t border-gray-100">
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit">{initialData ? 'Save Changes' : 'Register Employee'}</Button>
+          <Button type="submit" disabled={isSubmitting}>{initialData ? 'Save Changes' : 'Register Employee'}</Button>
         </div>
       </form>
+      <style>{`
+        .label-text {
+          display: block;
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #6b7280;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-bottom: 0.375rem;
+        }
+        .input-field {
+          width: 100%;
+          padding: 0.625rem 0.75rem;
+          background-color: #f9fafb;
+          border: 1px solid #e5e7eb;
+          border-radius: 0.5rem;
+          font-size: 0.875rem;
+          transition: all 0.2s;
+        }
+        .input-field:focus {
+          background-color: #ffffff;
+          outline: none;
+          border-color: #076653;
+          box-shadow: 0 0 0 3px rgba(7, 102, 83, 0.1);
+        }
+      `}</style>
     </Modal>
   );
 };

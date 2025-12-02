@@ -3,30 +3,33 @@ import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 import RegistrationModal from '../components/RegistrationModal';
 import { Lock, Eye, EyeOff, UserPlus, AlertTriangle } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { loginSchema, LoginFormData } from '../lib/schemas';
 
 const Login: React.FC = () => {
   const { login } = useAuth();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-    
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting }
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema)
+  });
+
+  const onSubmit = async (data: LoginFormData) => {
+    setAuthError('');
     try {
-      const success = await login(username, password);
+      const success = await login(data.username, data.password);
       if (!success) {
-        setError('Invalid username or password');
+        setAuthError('Invalid username or password');
       }
     } catch (err) {
-      setError('An error occurred during login');
-    } finally {
-      setIsLoading(false);
+      setAuthError('An error occurred during login');
     }
   };
 
@@ -48,15 +51,15 @@ const Login: React.FC = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-100">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
+          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+            {authError && (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
                     <AlertTriangle className="h-5 w-5 text-red-500" aria-hidden="true" />
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm text-red-700">{error}</p>
+                    <p className="text-sm text-red-700">{authError}</p>
                   </div>
                 </div>
               </div>
@@ -69,15 +72,17 @@ const Login: React.FC = () => {
               <div className="mt-1">
                 <input
                   id="username"
-                  name="username"
                   type="text"
                   autoComplete="username"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className={`appearance-none block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                    errors.username ? 'border-red-300' : 'border-gray-300'
+                  }`}
                   placeholder="Enter your username"
+                  {...register('username')}
                 />
+                {errors.username && (
+                  <p className="mt-2 text-sm text-red-600">{errors.username.message}</p>
+                )}
               </div>
             </div>
 
@@ -88,13 +93,12 @@ const Login: React.FC = () => {
               <div className="mt-1 relative">
                 <input
                   id="password"
-                  name="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm pr-10"
+                  className={`appearance-none block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm pr-10 ${
+                    errors.password ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  {...register('password')}
                 />
                 <button
                   type="button"
@@ -104,6 +108,9 @@ const Login: React.FC = () => {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              {errors.password && (
+                <p className="mt-2 text-sm text-red-600">{errors.password.message}</p>
+              )}
             </div>
 
             <div className="flex items-center justify-between">
@@ -127,8 +134,8 @@ const Login: React.FC = () => {
             </div>
 
             <div>
-              <Button type="submit" className="w-full flex justify-center" disabled={isLoading}>
-                {isLoading ? 'Signing in...' : (
+              <Button type="submit" className="w-full flex justify-center" disabled={isSubmitting}>
+                {isSubmitting ? 'Signing in...' : (
                   <>
                     <Lock size={16} className="mr-2" />
                     Sign in
