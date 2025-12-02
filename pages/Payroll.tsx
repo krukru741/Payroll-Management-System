@@ -1,22 +1,49 @@
-import React from 'react';
+
+import React, { useMemo, useState } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import Modal from '../components/Modal';
 import { MOCK_PAYROLL_SUMMARY, MOCK_EMPLOYEES } from '../constants';
+import { processPayrollForEmployee, PayrollResult } from '../utils/payroll';
 import { 
   Calendar, 
   Download, 
   CheckCircle, 
-  AlertTriangle,
   AlertCircle,
   FileText,
   Calculator,
   CreditCard,
   FileOutput,
   BadgePercent,
-  ChevronRight
+  ChevronRight,
+  Eye,
+  Printer,
+  X
 } from 'lucide-react';
 
 const Payroll: React.FC = () => {
+  const [selectedPayslip, setSelectedPayslip] = useState<{ emp: any, data: PayrollResult } | null>(null);
+
+  // Memoize payroll calculations
+  const payrollData = useMemo(() => {
+    return MOCK_EMPLOYEES.map(emp => {
+      // Simulate random OT for demo variety
+      const otPay = Math.floor(Math.random() * 3000); 
+      return {
+        emp,
+        ...processPayrollForEmployee(emp, otPay)
+      };
+    });
+  }, []);
+
+  const totals = useMemo(() => {
+    return payrollData.reduce((acc, curr) => ({
+      gross: acc.gross + curr.grossPay,
+      deductions: acc.deductions + curr.deductions.total,
+      net: acc.net + curr.netPay
+    }), { gross: 0, deductions: 0, net: 0 });
+  }, [payrollData]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -40,7 +67,7 @@ const Payroll: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-gradient-to-br from-primary-800 to-primary-900 rounded-xl p-6 text-white shadow-lg">
             <p className="text-primary-200 text-sm font-medium">Total Net Pay</p>
-            <h3 className="text-3xl font-bold mt-2">₱{MOCK_PAYROLL_SUMMARY.totalNet.toLocaleString()}</h3>
+            <h3 className="text-3xl font-bold mt-2">₱{totals.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             <div className="mt-4 flex items-center text-xs text-primary-200 bg-primary-800/50 inline-block px-2 py-1 rounded">
                 <Calendar size={12} className="mr-1" /> Payment Date: May 15, 2024
             </div>
@@ -48,14 +75,14 @@ const Payroll: React.FC = () => {
 
         <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col justify-center">
             <p className="text-gray-500 text-sm font-medium">Gross Pay</p>
-            <h3 className="text-2xl font-bold text-gray-900 mt-1">₱{MOCK_PAYROLL_SUMMARY.totalGross.toLocaleString()}</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mt-1">₱{totals.gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             <p className="text-xs text-gray-400 mt-2">Before deductions</p>
         </div>
 
         <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col justify-center">
             <p className="text-gray-500 text-sm font-medium">Total Deductions</p>
             <h3 className="text-2xl font-bold text-red-600 mt-1">
-                ₱{(MOCK_PAYROLL_SUMMARY.totalGross - MOCK_PAYROLL_SUMMARY.totalNet).toLocaleString()}
+                ₱{totals.deductions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </h3>
             <p className="text-xs text-gray-400 mt-2">Tax, SSS, PhilHealth, Pag-IBIG</p>
         </div>
@@ -74,40 +101,35 @@ const Payroll: React.FC = () => {
                                 <th className="py-3 px-4 text-xs font-semibold text-gray-500 uppercase text-right">Deductions</th>
                                 <th className="py-3 px-4 text-xs font-semibold text-gray-500 uppercase text-right">Net Pay</th>
                                 <th className="py-3 px-4 text-xs font-semibold text-gray-500 uppercase text-center">Status</th>
+                                <th className="py-3 px-4 text-xs font-semibold text-gray-500 uppercase text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {MOCK_EMPLOYEES.slice(0, 5).map((emp, idx) => {
-                                // Mock calculations
-                                const gross = emp.basicSalary / 2; // Half month
-                                const ot = Math.floor(Math.random() * 2000);
-                                const totalGross = gross + ot;
-                                const deductions = totalGross * 0.15;
-                                const net = totalGross - deductions;
-
-                                return (
-                                    <tr key={emp.id} className="hover:bg-gray-50">
-                                        <td className="py-3 px-4">
-                                            <div className="font-medium text-gray-900">{emp.lastName}, {emp.firstName}</div>
-                                            <div className="text-xs text-gray-500">{emp.department}</div>
-                                        </td>
-                                        <td className="py-3 px-4 text-right font-mono text-sm">₱{totalGross.toLocaleString()}</td>
-                                        <td className="py-3 px-4 text-right font-mono text-sm text-red-500">-₱{deductions.toLocaleString()}</td>
-                                        <td className="py-3 px-4 text-right font-mono text-sm font-bold text-gray-900">₱{net.toLocaleString()}</td>
-                                        <td className="py-3 px-4 text-center">
-                                            {idx === 2 ? (
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                                                    <AlertTriangle size={12} className="mr-1" /> Review
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                                    Draft
-                                                </span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                )
-                            })}
+                            {payrollData.map(({ emp, grossPay, deductions, netPay }, idx) => (
+                                <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="py-3 px-4">
+                                        <div className="font-medium text-gray-900">{emp.lastName}, {emp.firstName}</div>
+                                        <div className="text-xs text-gray-500">{emp.department}</div>
+                                    </td>
+                                    <td className="py-3 px-4 text-right font-mono text-sm">₱{grossPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                    <td className="py-3 px-4 text-right font-mono text-sm text-red-500">-₱{deductions.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                    <td className="py-3 px-4 text-right font-mono text-sm font-bold text-gray-900">₱{netPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                    <td className="py-3 px-4 text-center">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                            Processed
+                                        </span>
+                                    </td>
+                                    <td className="py-3 px-4 text-right">
+                                        <button 
+                                          onClick={() => setSelectedPayslip({ emp, data: { employeeId: emp.id, grossPay, deductions, netPay } })}
+                                          className="text-gray-400 hover:text-primary-600 transition-colors p-1"
+                                          title="View Payslip"
+                                        >
+                                          <Eye size={18} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
@@ -119,8 +141,37 @@ const Payroll: React.FC = () => {
 
         {/* Right Column: Status & Checklists */}
         <div className="space-y-6">
-            {/* Operational Issues */}
-            <Card title="Action Required">
+            {/* System Status - Phase 7 Complete */}
+            <Card title="System Status">
+                <div className="space-y-4">
+                    <p className="text-xs text-gray-500 mb-2">Payroll Engine Modules</p>
+                    
+                    {[
+                        { label: 'SSS Contribution Engine', status: 'Online', icon: Calculator },
+                        { label: 'PhilHealth Formulas', status: 'Online', icon: Calculator },
+                        { label: 'Pag-IBIG Calculation', status: 'Online', icon: Calculator },
+                        { label: 'Withholding Tax Tables', status: 'Online', icon: BadgePercent },
+                        { label: '13th Month Computation', status: 'Ready', icon: CreditCard },
+                        { label: 'Payslip Generation', status: 'Online', icon: FileOutput },
+                    ].map((item, i) => (
+                        <div key={i} className="flex items-center justify-between group">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-lg bg-green-50 text-green-600">
+                                    <item.icon size={16} />
+                                </div>
+                                <span className="text-sm text-gray-700 font-medium">{item.label}</span>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                                {item.status.toUpperCase()}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </Card>
+
+             {/* Operational Issues */}
+             <Card title="Action Required">
                 <div className="space-y-3">
                     <div className="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-100">
                         <AlertCircle className="text-red-500 mt-0.5 flex-shrink-0" size={18} />
@@ -132,53 +183,122 @@ const Payroll: React.FC = () => {
                             </button>
                         </div>
                     </div>
-
-                    <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-100">
-                        <FileText className="text-yellow-600 mt-0.5 flex-shrink-0" size={18} />
-                        <div>
-                            <h4 className="text-sm font-semibold text-yellow-900">Unapproved Overtime</h4>
-                            <p className="text-xs text-yellow-700 mt-1">5 OT requests pending approval from managers.</p>
-                            <button className="text-xs font-medium text-yellow-700 mt-2 hover:underline flex items-center">
-                                Review Requests <ChevronRight size={12} />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </Card>
-
-            {/* Development Roadmap / Missing Features */}
-            <Card title="Pending Features (Phase 7)">
-                <div className="space-y-4">
-                    <p className="text-xs text-gray-500 italic mb-2">Modules pending backend integration per system spec.</p>
-                    
-                    {[
-                        { label: 'SSS Contribution Engine', status: 'Pending', icon: Calculator },
-                        { label: 'PhilHealth Formulas', status: 'Pending', icon: Calculator },
-                        { label: 'Pag-IBIG Calculation', status: 'Pending', icon: Calculator },
-                        { label: 'Withholding Tax Tables', status: 'Pending', icon: BadgePercent },
-                        { label: '13th Month Computation', status: 'Scheduled', icon: CreditCard },
-                        { label: 'Payslip PDF Generation', status: 'Dev', icon: FileOutput },
-                    ].map((item, i) => (
-                        <div key={i} className="flex items-center justify-between group">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-gray-50 text-gray-400 group-hover:bg-primary-50 group-hover:text-primary-500 transition-colors">
-                                    <item.icon size={16} />
-                                </div>
-                                <span className="text-sm text-gray-600 font-medium">{item.label}</span>
-                            </div>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                item.status === 'Dev' ? 'bg-blue-100 text-blue-700' : 
-                                item.status === 'Scheduled' ? 'bg-purple-100 text-purple-700' : 
-                                'bg-gray-100 text-gray-500'
-                            }`}>
-                                {item.status.toUpperCase()}
-                            </span>
-                        </div>
-                    ))}
                 </div>
             </Card>
         </div>
       </div>
+
+      {/* Payslip Modal */}
+      <Modal 
+        isOpen={!!selectedPayslip} 
+        onClose={() => setSelectedPayslip(null)} 
+        title="Payslip Preview"
+      >
+        {selectedPayslip && (
+          <div className="space-y-6">
+            {/* Payslip Header */}
+            <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+              <div className="flex justify-between items-start border-b border-gray-200 pb-4 mb-4">
+                 <div>
+                    <h2 className="text-lg font-bold text-gray-900">PAYSLIP</h2>
+                    <p className="text-sm text-gray-500">PayrollSys Inc.</p>
+                 </div>
+                 <div className="text-right">
+                    <p className="text-sm font-semibold text-gray-900">Period: {MOCK_PAYROLL_SUMMARY.periodStart} - {MOCK_PAYROLL_SUMMARY.periodEnd}</p>
+                    <p className="text-xs text-gray-500">Date Generated: {new Date().toLocaleDateString()}</p>
+                 </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 text-sm mb-2">
+                <div>
+                   <span className="text-gray-500 block text-xs uppercase tracking-wider">Employee Name</span>
+                   <span className="font-semibold text-gray-900">{selectedPayslip.emp.lastName}, {selectedPayslip.emp.firstName}</span>
+                </div>
+                 <div>
+                   <span className="text-gray-500 block text-xs uppercase tracking-wider">Employee ID</span>
+                   <span className="font-semibold text-gray-900">{selectedPayslip.emp.id}</span>
+                </div>
+                 <div>
+                   <span className="text-gray-500 block text-xs uppercase tracking-wider">Department</span>
+                   <span className="font-medium text-gray-900">{selectedPayslip.emp.department}</span>
+                </div>
+                 <div>
+                   <span className="text-gray-500 block text-xs uppercase tracking-wider">Position</span>
+                   <span className="font-medium text-gray-900">{selectedPayslip.emp.position}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Calculations Grid */}
+            <div className="grid grid-cols-2 gap-8">
+               {/* Earnings */}
+               <div>
+                 <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2 mb-3">Earnings</h4>
+                 <div className="space-y-2 text-sm">
+                   <div className="flex justify-between">
+                     <span className="text-gray-600">Basic Pay (Semi-monthly)</span>
+                     <span className="font-mono text-gray-900">₱{(selectedPayslip.emp.basicSalary / 2).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span className="text-gray-600">Overtime</span>
+                     <span className="font-mono text-gray-900">₱{(selectedPayslip.data.grossPay - (selectedPayslip.emp.basicSalary / 2)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                   </div>
+                   <div className="flex justify-between pt-2 border-t border-dashed border-gray-200 font-semibold">
+                     <span>Total Earnings</span>
+                     <span>₱{selectedPayslip.data.grossPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Deductions */}
+               <div>
+                 <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2 mb-3">Deductions</h4>
+                 <div className="space-y-2 text-sm">
+                   <div className="flex justify-between">
+                     <span className="text-gray-600">SSS</span>
+                     <span className="font-mono text-gray-900">₱{selectedPayslip.data.deductions.sss.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span className="text-gray-600">PhilHealth</span>
+                     <span className="font-mono text-gray-900">₱{selectedPayslip.data.deductions.philHealth.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span className="text-gray-600">Pag-IBIG</span>
+                     <span className="font-mono text-gray-900">₱{selectedPayslip.data.deductions.pagIbig.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span className="text-gray-600">Withholding Tax</span>
+                     <span className="font-mono text-gray-900">₱{selectedPayslip.data.deductions.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                   </div>
+                   <div className="flex justify-between pt-2 border-t border-dashed border-gray-200 font-semibold text-red-600">
+                     <span>Total Deductions</span>
+                     <span>-₱{selectedPayslip.data.deductions.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                   </div>
+                 </div>
+               </div>
+            </div>
+
+            {/* Net Pay */}
+            <div className="bg-primary-900 text-white p-4 rounded-lg flex justify-between items-center shadow-lg">
+               <div>
+                 <span className="block text-primary-200 text-xs uppercase tracking-wider font-semibold">Net Pay</span>
+                 <span className="text-xs opacity-70">Take home pay</span>
+               </div>
+               <div className="text-2xl font-bold">
+                 ₱{selectedPayslip.data.netPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+               </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+               <Button variant="outline" onClick={() => setSelectedPayslip(null)}>Close</Button>
+               <Button onClick={() => window.print()} className="flex items-center gap-2">
+                 <Printer size={16} /> Print Payslip
+               </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
