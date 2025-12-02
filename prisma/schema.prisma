@@ -1,0 +1,223 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum CivilStatus {
+  SINGLE
+  MARRIED
+  WIDOWED
+  SEPARATED
+}
+
+enum Department {
+  ENGINEERING
+  HR
+  FINANCE
+  SALES
+  MARKETING
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  username      String    @unique
+  password      String    // Hashed
+  role          UserRole  @default(EMPLOYEE)
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  employee      Employee? @relation(fields: [employeeId], references: [id])
+  employeeId    String?   @unique
+  auditLogs     AuditLog[]
+}
+
+model Employee {
+  id            String    @id // Custom ID like EMP-001
+  firstName     String
+  lastName      String
+  middleName    String?
+  email         String    @unique
+  
+  // Profile
+  birthDate     DateTime
+  age           Int?
+  gender        Gender
+  civilStatus   CivilStatus
+  address       String
+  contactNo     String
+  avatarUrl     String?
+
+  // Employment
+  department    Department
+  position      String
+  status        EmployeeStatus @default(ACTIVE)
+  dateHired     DateTime
+  dateResigned  DateTime?
+
+  // Compensation
+  basicSalary   Float
+  ratePerHour   Float?
+  ratePerDay    Float?
+
+  // Government IDs
+  sssNo         String?
+  philHealthNo  String?
+  pagIbigNo     String?
+  tinNo         String?
+
+  // Emergency Contact
+  ecFullName    String?
+  ecContactNo   String?
+  ecRelation    String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  user          User?
+  attendance    Attendance[]
+  payrolls      Payroll[]
+  leaves        LeaveRequest[]
+  loans         Loan[]
+  documents     Document[]
+}
+
+model Attendance {
+  id            String    @id @default(cuid())
+  date          DateTime
+  timeIn        DateTime?
+  timeOut       DateTime?
+  status        String    // PRESENT, LATE, ABSENT, HALF_DAY
+  hoursWorked   Float     @default(0)
+  overtimeHours Float     @default(0)
+  
+  employee      Employee  @relation(fields: [employeeId], references: [id])
+  employeeId    String
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([employeeId, date])
+}
+
+model Payroll {
+  id            String    @id @default(cuid())
+  periodStart   DateTime
+  periodEnd     DateTime
+  payoutDate    DateTime?
+  
+  // Earnings
+  basicPay      Float
+  overtimePay   Float
+  allowances    Float     @default(0)
+  grossPay      Float
+
+  // Deductions
+  sssDeduction        Float
+  philHealthDeduction Float
+  pagIbigDeduction    Float
+  taxDeduction        Float
+  otherDeductions     Float     @default(0)
+  totalDeductions     Float
+
+  // Net
+  netPay        Float
+
+  // Employer Shares (Memo)
+  erSSS         Float
+  erPhilHealth  Float
+  erPagIbig     Float
+
+  status        String    // DRAFT, FINALIZED, PAID
+
+  employee      Employee  @relation(fields: [employeeId], references: [id])
+  employeeId    String
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model LeaveRequest {
+  id            String    @id @default(cuid())
+  type          String    // VACATION, SICK, EMERGENCY
+  startDate     DateTime
+  endDate       DateTime
+  reason        String
+  status        String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  
+  employee      Employee  @relation(fields: [employeeId], references: [id])
+  employeeId    String
+
+  approvedBy    String?
+  rejectionReason String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Loan {
+  id            String    @id @default(cuid())
+  type          String    // SSS, PAGIBIG, COMPANY
+  principal     Float
+  balance       Float
+  monthlyAmort  Float
+  status        String    // ACTIVE, PAID
+
+  employee      Employee  @relation(fields: [employeeId], references: [id])
+  employeeId    String
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Document {
+  id            String    @id @default(cuid())
+  name          String
+  type          String
+  url           String
+  size          Int
+
+  employee      Employee  @relation(fields: [employeeId], references: [id])
+  employeeId    String
+
+  uploadedAt    DateTime  @default(now())
+}
+
+model AuditLog {
+  id            String    @id @default(cuid())
+  action        String    // LOGIN, CREATE_EMPLOYEE, PROCESS_PAYROLL
+  details       String?
+  ipAddress     String?
+  
+  user          User?     @relation(fields: [userId], references: [id])
+  userId        String?
+
+  timestamp     DateTime  @default(now())
+}
