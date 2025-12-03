@@ -12,6 +12,7 @@ export enum Department {
   FINANCE = 'FINANCE',
   SALES = 'SALES',
   MARKETING = 'MARKETING',
+  ADMIN = 'ADMIN',
 }
 
 export enum UserRole {

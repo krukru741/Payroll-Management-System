@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { registrationSchema, RegistrationFormData } from '../lib/schemas';
+import { publicRegistrationSchema, RegistrationFormData } from '../lib/schemas';
 
 interface RegistrationModalProps {
   isOpen: boolean;
@@ -26,14 +26,10 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
     reset,
     formState: { errors, isSubmitting }
   } = useForm<RegistrationFormData>({
-    resolver: zodResolver(registrationSchema),
+    resolver: zodResolver(publicRegistrationSchema),
     defaultValues: {
       gender: Gender.MALE,
       civilStatus: CivilStatus.SINGLE,
-      department: Department.ENGINEERING,
-      basicSalary: 25000,
-      status: EmployeeStatus.ACTIVE,
-      dateHired: new Date().toISOString().split('T')[0],
       age: 0
     }
   });
@@ -73,11 +69,11 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
         lastName: data.lastName,
         middleName: data.middleName,
         email: data.email,
-        position: data.position,
-        department: data.department,
-        status: data.status,
-        dateHired: data.dateHired,
-        basicSalary: data.basicSalary,
+        position: "Applicant", // Default position
+        department: Department.ENGINEERING, // Default department (or add 'APPLICANT' to enum?)
+        status: EmployeeStatus.ACTIVE,
+        dateHired: new Date().toISOString(), // Default to today
+        basicSalary: 25000, // Default salary
         avatarUrl: `https://ui-avatars.com/api/?name=${data.firstName}+${data.lastName}&background=random`,
         birthDate: data.birthDate,
         age: data.age,
@@ -85,12 +81,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
         civilStatus: data.civilStatus,
         address: data.address,
         contactNo: data.contactNo,
-        governmentIds: {
-          sss: data.sssNo || '',
-          philHealth: data.philhealthNo || '',
-          pagIbig: data.pagibigNo || '',
-          tin: data.tinNo || ''
-        },
+
         emergencyContact: {
           fullName: data.ecFullName,
           contactNumber: data.ecContactNumber,
@@ -107,8 +98,8 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
         username: data.username,
         password: data.password,
         role: UserRole.EMPLOYEE, // Default role
-        department: data.department,
-        position: data.position,
+        department: newEmployee.department,
+        position: newEmployee.position,
         employeeId: newEmployeeId, // Link to employee record
         avatarUrl: newEmployee.avatarUrl,
         employeeData: newEmployee // Pass full employee data to backend
@@ -137,123 +128,86 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
         
         {/* 1. Personal Information */}
         <SectionHeader icon={User} title="Personal Information" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-12 md:col-span-4">
             <label className="label-text">First Name *</label>
             <input {...register('firstName')} className={`input-field ${errors.firstName ? 'border-red-500' : ''}`} />
             {errors.firstName && <span className="text-xs text-red-500">{errors.firstName.message}</span>}
           </div>
-          <div>
+          <div className="col-span-12 md:col-span-4">
             <label className="label-text">Middle Name</label>
             <input {...register('middleName')} className="input-field" />
           </div>
-          <div>
+          <div className="col-span-12 md:col-span-4">
             <label className="label-text">Last Name *</label>
             <input {...register('lastName')} className={`input-field ${errors.lastName ? 'border-red-500' : ''}`} />
             {errors.lastName && <span className="text-xs text-red-500">{errors.lastName.message}</span>}
           </div>
           
-          <div className="md:col-span-2">
+          <div className="col-span-12 md:col-span-8">
             <label className="label-text">Email Address *</label>
             <input type="email" {...register('email')} className={`input-field ${errors.email ? 'border-red-500' : ''}`} />
             {errors.email && <span className="text-xs text-red-500">{errors.email.message}</span>}
           </div>
-          <div>
+          <div className="col-span-12 md:col-span-4">
              <label className="label-text">Contact No. *</label>
              <input type="tel" {...register('contactNo')} className={`input-field ${errors.contactNo ? 'border-red-500' : ''}`} placeholder="09xxxxxxxxx" />
              {errors.contactNo && <span className="text-xs text-red-500">{errors.contactNo.message}</span>}
           </div>
 
-          <div>
+          <div className="col-span-6 md:col-span-4">
             <label className="label-text">Birthdate *</label>
             <input type="date" {...register('birthDate')} className={`input-field ${errors.birthDate ? 'border-red-500' : ''}`} />
             {errors.birthDate && <span className="text-xs text-red-500">{errors.birthDate.message}</span>}
           </div>
-          <div>
+          <div className="col-span-6 md:col-span-2">
             <label className="label-text">Age</label>
             <input type="number" {...register('age')} readOnly className="input-field bg-gray-50" />
           </div>
-          <div>
+          <div className="col-span-6 md:col-span-3">
             <label className="label-text">Gender *</label>
             <select {...register('gender')} className="input-field">
               {Object.values(Gender).map(g => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
-          
-          <div>
+          <div className="col-span-6 md:col-span-3">
             <label className="label-text">Civil Status *</label>
              <select {...register('civilStatus')} className="input-field">
               {Object.values(CivilStatus).map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <div className="md:col-span-2">
+          
+          <div className="col-span-12">
             <label className="label-text">Address *</label>
             <input {...register('address')} className={`input-field ${errors.address ? 'border-red-500' : ''}`} placeholder="House No, Street, City, Province" />
             {errors.address && <span className="text-xs text-red-500">{errors.address.message}</span>}
           </div>
         </div>
 
-        {/* 2. Employment Details */}
-        <SectionHeader icon={Briefcase} title="Employment Details" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-           <div>
-             <label className="label-text">Position/Job Title *</label>
-             <input {...register('position')} className={`input-field ${errors.position ? 'border-red-500' : ''}`} />
-             {errors.position && <span className="text-xs text-red-500">{errors.position.message}</span>}
-           </div>
-           <div>
-              <label className="label-text">Department *</label>
-              <select {...register('department')} className="input-field">
-                {Object.values(Department).map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-           </div>
-        </div>
-
-        {/* 3. Government IDs */}
-        <SectionHeader icon={FileText} title="Government IDs" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-           <div>
-            <label className="label-text">SSS No.</label>
-            <input {...register('sssNo')} className="input-field" placeholder="XX-XXXXXXX-X" />
-          </div>
-          <div>
-            <label className="label-text">PhilHealth No.</label>
-            <input {...register('philhealthNo')} className="input-field" placeholder="XX-XXXXXXXXX-X" />
-          </div>
-          <div>
-            <label className="label-text">Pag-IBIG No.</label>
-            <input {...register('pagibigNo')} className="input-field" placeholder="XXXX-XXXX-XXXX" />
-          </div>
-          <div>
-            <label className="label-text">TIN</label>
-            <input {...register('tinNo')} className="input-field" placeholder="XXX-XXX-XXX-XXX" />
-          </div>
-        </div>
-
-        {/* 4. Emergency Contact */}
+        {/* 2. Emergency Contact */}
         <SectionHeader icon={Heart} title="Emergency Contact" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-1">
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-12 md:col-span-5">
              <label className="label-text">Full Name *</label>
              <input {...register('ecFullName')} className={`input-field ${errors.ecFullName ? 'border-red-500' : ''}`} />
              {errors.ecFullName && <span className="text-xs text-red-500">{errors.ecFullName.message}</span>}
           </div>
-          <div className="md:col-span-1">
+          <div className="col-span-12 md:col-span-4">
              <label className="label-text">Contact No. *</label>
              <input {...register('ecContactNumber')} className={`input-field ${errors.ecContactNumber ? 'border-red-500' : ''}`} />
              {errors.ecContactNumber && <span className="text-xs text-red-500">{errors.ecContactNumber.message}</span>}
           </div>
-          <div className="md:col-span-1">
+          <div className="col-span-12 md:col-span-3">
              <label className="label-text">Relationship *</label>
-             <input {...register('ecRelationship')} className={`input-field ${errors.ecRelationship ? 'border-red-500' : ''}`} placeholder="e.g. Spouse, Parent" />
+             <input {...register('ecRelationship')} className={`input-field ${errors.ecRelationship ? 'border-red-500' : ''}`} placeholder="e.g. Spouse" />
              {errors.ecRelationship && <span className="text-xs text-red-500">{errors.ecRelationship.message}</span>}
           </div>
         </div>
 
-        {/* 5. User Account */}
+        {/* 3. User Account */}
         <SectionHeader icon={Shield} title="User Account" />
-        <div className="grid grid-cols-1 gap-4">
-          <div>
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-12 md:col-span-4">
             <label className="label-text">Username *</label>
             <div className="relative">
                 <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -261,23 +215,21 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
             </div>
             {errors.username && <span className="text-xs text-red-500">{errors.username.message}</span>}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div>
-                <label className="label-text">Password *</label>
-                <div className="relative">
-                    <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input type="password" autoComplete="new-password" {...register('password')} className={`input-field pl-10 ${errors.password ? 'border-red-500' : ''}`} />
-                </div>
-                {errors.password && <span className="text-xs text-red-500">{errors.password.message}</span>}
+          <div className="col-span-12 md:col-span-4">
+             <label className="label-text">Password *</label>
+             <div className="relative">
+                 <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                 <input type="password" autoComplete="new-password" {...register('password')} className={`input-field pl-10 ${errors.password ? 'border-red-500' : ''}`} />
              </div>
-             <div>
-                <label className="label-text">Confirm Password *</label>
-                <div className="relative">
-                    <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input type="password" autoComplete="new-password" {...register('confirmPassword')} className={`input-field pl-10 ${errors.confirmPassword ? 'border-red-500' : ''}`} />
-                </div>
-                {errors.confirmPassword && <span className="text-xs text-red-500">{errors.confirmPassword.message}</span>}
+             {errors.password && <span className="text-xs text-red-500">{errors.password.message}</span>}
+          </div>
+          <div className="col-span-12 md:col-span-4">
+             <label className="label-text">Confirm Password *</label>
+             <div className="relative">
+                 <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                 <input type="password" autoComplete="new-password" {...register('confirmPassword')} className={`input-field pl-10 ${errors.confirmPassword ? 'border-red-500' : ''}`} />
              </div>
+             {errors.confirmPassword && <span className="text-xs text-red-500">{errors.confirmPassword.message}</span>}
           </div>
         </div>
 

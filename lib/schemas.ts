@@ -47,6 +47,20 @@ export const employeeFormSchema = z.intersection(
 );
 
 // Registration Schema extends Employee Schema with User Account
+// Public Registration Schema (excludes employment details and government IDs)
+export const publicRegistrationSchema = z.intersection(
+  personalInfoSchema,
+  emergencyContactSchema
+).and(z.object({
+  username: z.string().min(3, 'Username must be at least 3 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string().min(6, 'Confirm password must be at least 6 characters'),
+})).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+// Registration Schema extends Employee Schema with User Account (for internal use if needed)
 export const registrationSchema = employeeFormSchema.and(z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -58,4 +72,4 @@ export const registrationSchema = employeeFormSchema.and(z.object({
 
 export type LoginFormData = z.infer<typeof loginSchema>;
 export type EmployeeFormData = z.infer<typeof employeeFormSchema>;
-export type RegistrationFormData = z.infer<typeof registrationSchema>;
+export type RegistrationFormData = z.infer<typeof publicRegistrationSchema>;

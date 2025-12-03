@@ -40,3 +40,85 @@ export const PAYROLL_HISTORY_DATA = [
 ];
 
 export const COLORS = ['#076653', '#E3EF26', '#0C342C', '#E2FBCE', '#06231D'];
+
+export const POSITION_DEPARTMENT_MAP: Record<string, string[]> = {
+  'ENGINEERING': [
+    'Software Engineer', 
+    'Senior Software Engineer', 
+    'Lead Software Engineer',
+    'DevOps Engineer', 
+    'QA Engineer', 
+    'QA Lead',
+    'System Architect',
+    'Technical Lead',
+    'Frontend Developer',
+    'Backend Developer',
+    'Full Stack Developer',
+    'Mobile Developer',
+    'Data Engineer'
+  ],
+  'HR': [
+    'HR Manager', 
+    'HR Specialist', 
+    'HR Generalist',
+    'Recruiter', 
+    'Senior Recruiter',
+    'Training Coordinator',
+    'Talent Acquisition Specialist',
+    'Employee Relations Specialist',
+    'Compensation and Benefits Specialist',
+    'HR Business Partner'
+  ],
+  'FINANCE': [
+    'Accountant', 
+    'Senior Accountant',
+    'Financial Analyst', 
+    'Payroll Officer', 
+    'Payroll Manager',
+    'Finance Manager',
+    'Chief Financial Officer',
+    'Budget Analyst',
+    'Tax Specialist',
+    'Accounts Payable Specialist',
+    'Accounts Receivable Specialist',
+    'Financial Controller'
+  ],
+  'SALES': [
+    'Sales Representative', 
+    'Senior Sales Representative',
+    'Account Manager', 
+    'Key Account Manager',
+    'Sales Manager', 
+    'Regional Sales Manager',
+    'Business Development Officer',
+    'Business Development Manager',
+    'Sales Executive',
+    'Sales Director',
+    'Customer Success Manager'
+  ],
+  'MARKETING': [
+    'Marketing Specialist', 
+    'Marketing Manager',
+    'Content Writer', 
+    'Content Manager',
+    'SEO Specialist', 
+    'Digital Marketing Specialist',
+    'Social Media Manager',
+    'Brand Manager',
+    'Product Marketing Manager',
+    'Marketing Director',
+    'Graphic Designer',
+    'Marketing Coordinator'
+  ],
+  'ADMIN': [
+    'Administrator', 
+    'Executive Assistant', 
+    'Office Manager', 
+    'Administrative Officer',
+    'Administrative Assistant',
+    'Receptionist',
+    'Office Coordinator',
+    'Facilities Manager',
+    'Operations Coordinator'
+  ]
+};
