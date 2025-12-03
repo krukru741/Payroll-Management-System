@@ -64,7 +64,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         <div className="p-4 border-t border-primary-800">
           <div className="flex items-center justify-between p-3 rounded-lg bg-primary-800/50">
-            <div className="flex items-center gap-3">
+            <button className="flex items-center gap-3 text-left" onClick={() => handleNavClick('/profile')}>
               <img 
                 src={user?.avatarUrl} 
                 alt="User" 
@@ -74,7 +74,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <span className="text-sm font-medium truncate w-24">{user?.name}</span>
                 <span className="text-xs text-gray-400">{user?.role}</span>
               </div>
-            </div>
+            </button>
             <button 
                 onClick={handleLogout}
                 className="text-gray-400 hover:text-white transition-colors p-1"

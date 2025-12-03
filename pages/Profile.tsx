@@ -1,5 +1,4 @@
-import React from 'react';
-import Card from '../components/Card';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { User, Briefcase, FileText, Heart, MapPin, Phone, Mail, Calendar } from 'lucide-react';
@@ -7,6 +6,7 @@ import { User, Briefcase, FileText, Heart, MapPin, Phone, Mail, Calendar } from 
 const Profile: React.FC = () => {
   const { user } = useAuth();
   const { getEmployeeById } = useData();
+  const [activeTab, setActiveTab] = useState('personal');
 
   if (!user || !user.employeeId) {
     return (
@@ -28,132 +28,149 @@ const Profile: React.FC = () => {
     );
   }
 
-  const SectionHeader = ({ icon: Icon, title }: { icon: any, title: string }) => (
-    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
-      <Icon size={18} className="text-primary-500" />
-      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{title}</h3>
+  const InfoItem = ({ label, value }: { label: string, value: string | number | undefined }) => (
+    <div>
+      <span className="block text-xs text-gray-500 uppercase tracking-wide">{label}</span>
+      <span className="block text-sm font-medium text-gray-900">{value || 'N/A'}</span>
     </div>
   );
 
-  const InfoItem = ({ label, value }: { label: string, value: string | number | undefined }) => (
-    <div className="mb-3">
-      <span className="block text-xs text-gray-500 uppercase tracking-wide mb-1">{label}</span>
-      <span className="block text-sm font-medium text-gray-900">{value || '-'}</span>
-    </div>
+  const TabButton = ({ tabName, label }: { tabName: string, label: string }) => (
+    <button
+      onClick={() => setActiveTab(tabName)}
+      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+        activeTab === tabName
+          ? 'bg-primary-100 text-primary-700'
+          : 'text-gray-600 hover:bg-gray-100'
+      }`}
+    >
+      {label}
+    </button>
   );
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      {/* Header Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8 flex flex-col sm:flex-row gap-6 items-center sm:items-start relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-primary-800 to-primary-600 z-0"></div>
-        
-        <div className="relative z-10 mt-12 sm:mt-8">
-            <img 
-              src={employee.avatarUrl} 
-              alt="Profile" 
-              className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md bg-white"
-            />
+    <div className="max-w-6xl mx-auto">
+      {/* Profile Header */}
+      <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+        <div className="h-32 bg-gradient-to-r from-primary-700 to-primary-500"></div>
+        <div className="p-6 -mt-16 flex items-end gap-6">
+          <img
+            src={employee.avatarUrl}
+            alt="Profile"
+            className="w-28 h-28 rounded-full object-cover border-4 border-white shadow-lg bg-white"
+          />
+          <div className="pb-1">
+            <h1 className="text-3xl font-bold text-gray-900">{employee.firstName} {employee.lastName}</h1>
+            <p className="text-gray-600 font-medium">{employee.position}</p>
+          </div>
         </div>
-        
-        <div className="relative z-10 sm:mt-16 text-center sm:text-left flex-1">
-           <h1 className="text-2xl font-bold text-gray-900">{employee.firstName} {employee.lastName}</h1>
-           <p className="text-gray-500 font-medium">{employee.position}</p>
-           <div className="flex flex-wrap gap-3 mt-3 justify-center sm:justify-start">
-             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary-50 text-primary-700 border border-primary-100">
-               {employee.department}
-             </span>
-             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-100">
-               {employee.status}
-             </span>
-             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-600 border border-gray-200">
-               ID: {employee.id}
-             </span>
-           </div>
+        <div className="px-6 pb-4 flex flex-wrap gap-3 items-center border-b border-gray-200">
+          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+            {employee.department}
+          </span>
+          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700">
+            {employee.status}
+          </span>
+          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+            ID: {employee.id}
+          </span>
+        </div>
+        <div className="p-4 bg-gray-50/50 flex gap-2">
+            <TabButton tabName="personal" label="Personal Info" />
+            <TabButton tabName="employment" label="Employment" />
+            <TabButton tabName="ids" label="Government IDs" />
+            <TabButton tabName="emergency" label="Emergency Contact" />
         </div>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <SectionHeader icon={User} title="Personal Information" />
-          <div className="grid grid-cols-2 gap-4">
-             <InfoItem label="First Name" value={employee.firstName} />
-             <InfoItem label="Last Name" value={employee.lastName} />
-             <InfoItem label="Middle Name" value={employee.middleName} />
-             <InfoItem label="Gender" value={employee.gender} />
-             <InfoItem label="Civil Status" value={employee.civilStatus} />
-             <InfoItem label="Birth Date" value={employee.birthDate} />
-             <InfoItem label="Age" value={employee.age} />
-          </div>
-          
-          <div className="mt-4 pt-4 border-t border-gray-50 border-dashed">
-            <div className="grid grid-cols-1 gap-4">
-               <div className="flex items-start gap-3">
-                  <MapPin size={16} className="text-gray-400 mt-0.5" />
-                  <div>
-                    <span className="block text-xs text-gray-500 uppercase tracking-wide">Address</span>
-                    <span className="text-sm text-gray-900">{employee.address}</span>
-                  </div>
-               </div>
-               <div className="flex items-center gap-3">
-                  <Mail size={16} className="text-gray-400" />
-                  <div>
-                    <span className="block text-xs text-gray-500 uppercase tracking-wide">Email</span>
-                    <span className="text-sm text-gray-900">{employee.email}</span>
-                  </div>
-               </div>
-               <div className="flex items-center gap-3">
-                  <Phone size={16} className="text-gray-400" />
-                  <div>
-                    <span className="block text-xs text-gray-500 uppercase tracking-wide">Contact No.</span>
-                    <span className="text-sm text-gray-900">{employee.contactNo}</span>
-                  </div>
-               </div>
+      
+      {/* Tab Content */}
+      <div className="mt-6">
+        {activeTab === 'personal' && (
+          <div className="bg-white rounded-xl shadow-md border border-gray-100 p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="md:col-span-1">
+                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-4">
+                    <User size={20} className="text-primary-500" />
+                    Personal Details
+                </h3>
+                <div className="space-y-4">
+                    <InfoItem label="First Name" value={employee.firstName} />
+                    <InfoItem label="Middle Name" value={employee.middleName} />
+                    <InfoItem label="Last Name" value={employee.lastName} />
+                    <InfoItem label="Gender" value={employee.gender} />
+                    <InfoItem label="Civil Status" value={employee.civilStatus} />
+                    <InfoItem label="Birth Date" value={new Date(employee.birthDate).toLocaleDateString()} />
+                </div>
+            </div>
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-4">
+                        <MapPin size={20} className="text-primary-500" />
+                        Address
+                    </h3>
+                    <p className="text-sm text-gray-700">{employee.address}</p>
+                </div>
+                <div>
+                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-4">
+                        <Phone size={20} className="text-primary-500" />
+                        Contact
+                    </h3>
+                    <div className="space-y-4">
+                        <InfoItem label="Email Address" value={employee.email} />
+                        <InfoItem label="Contact Number" value={employee.contactNo} />
+                    </div>
+                </div>
             </div>
           </div>
-        </Card>
+        )}
 
-        <div className="space-y-6">
-          <Card>
-            <SectionHeader icon={Briefcase} title="Employment" />
-             <div className="grid grid-cols-2 gap-4">
-               <InfoItem label="Department" value={employee.department} />
-               <InfoItem label="Position" value={employee.position} />
-               <div className="col-span-2 flex items-center gap-2">
-                  <Calendar size={16} className="text-gray-400" />
-                  <div>
-                     <span className="block text-xs text-gray-500 uppercase tracking-wide">Date Hired</span>
-                     <span className="text-sm font-semibold text-gray-900">{new Date(employee.dateHired).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                  </div>
-               </div>
-               <div className="col-span-2 pt-2 border-t border-gray-50">
-                   <span className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Basic Monthly Salary</span>
-                   <span className="text-lg font-mono font-bold text-gray-900">₱{employee.basicSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-               </div>
+        {activeTab === 'employment' && (
+          <div className="bg-white rounded-xl shadow-md border border-gray-100 p-8">
+             <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-6">
+                <Briefcase size={20} className="text-primary-500" />
+                Employment Details
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <InfoItem label="Department" value={employee.department} />
+                <InfoItem label="Position" value={employee.position} />
+                <InfoItem label="Date Hired" value={new Date(employee.dateHired).toLocaleDateString()} />
+                <div>
+                    <span className="block text-xs text-gray-500 uppercase tracking-wide">Monthly Salary</span>
+                    <span className="text-xl font-mono font-semibold text-gray-900">
+                        ₱{employee.basicSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                </div>
             </div>
-          </Card>
+          </div>
+        )}
 
-          <Card>
-            <SectionHeader icon={FileText} title="Government IDs" />
-             <div className="grid grid-cols-2 gap-4">
+        {activeTab === 'ids' && (
+           <div className="bg-white rounded-xl shadow-md border border-gray-100 p-8">
+             <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-6">
+                <FileText size={20} className="text-primary-500" />
+                Government IDs
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                <InfoItem label="SSS No." value={employee.governmentIds?.sss} />
                <InfoItem label="PhilHealth No." value={employee.governmentIds?.philHealth} />
                <InfoItem label="Pag-IBIG No." value={employee.governmentIds?.pagIbig} />
                <InfoItem label="TIN" value={employee.governmentIds?.tin} />
             </div>
-          </Card>
+          </div>
+        )}
 
-          <Card>
-            <SectionHeader icon={Heart} title="Emergency Contact" />
-             <div className="grid grid-cols-1 gap-4">
-               <InfoItem label="Name" value={employee.emergencyContact?.fullName} />
-               <div className="grid grid-cols-2 gap-4">
-                  <InfoItem label="Relationship" value={employee.emergencyContact?.relationship} />
-                  <InfoItem label="Contact No." value={employee.emergencyContact?.contactNumber} />
-               </div>
+        {activeTab === 'emergency' && (
+           <div className="bg-white rounded-xl shadow-md border border-gray-100 p-8">
+             <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-6">
+                <Heart size={20} className="text-primary-500" />
+                Emergency Contact
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+               <InfoItem label="Full Name" value={employee.emergencyContact?.fullName} />
+               <InfoItem label="Relationship" value={employee.emergencyContact?.relationship} />
+               <InfoItem label="Contact Number" value={employee.emergencyContact?.contactNumber} />
             </div>
-          </Card>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

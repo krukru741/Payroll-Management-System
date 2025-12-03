@@ -90,6 +90,11 @@ export const canAccessRoute = (role: UserRole, path: string): boolean => {
         return false;
     }
 
+    // Employees should not access the general employee list.
+    if (role === UserRole.EMPLOYEE && module === 'employees') {
+        return false;
+    }
+
     // Check if the user's role has any permissions for this module.
     const modulePermissions = PERMISSIONS[role]?.[module];
     
