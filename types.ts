@@ -1,36 +1,36 @@
 import React from 'react';
 
 export enum EmployeeStatus {
-  ACTIVE = 'Active',
-  INACTIVE = 'Inactive',
-  ON_LEAVE = 'On Leave',
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  ON_LEAVE = 'ON_LEAVE',
 }
 
 export enum Department {
-  ENGINEERING = 'Engineering',
-  HR = 'Human Resources',
-  FINANCE = 'Finance',
-  SALES = 'Sales',
-  MARKETING = 'Marketing',
+  ENGINEERING = 'ENGINEERING',
+  HR = 'HR',
+  FINANCE = 'FINANCE',
+  SALES = 'SALES',
+  MARKETING = 'MARKETING',
 }
 
 export enum UserRole {
-  ADMIN = 'Admin',
-  MANAGER = 'Manager',
-  EMPLOYEE = 'Employee',
+  ADMIN = 'ADMIN',
+  MANAGER = 'MANAGER',
+  EMPLOYEE = 'EMPLOYEE',
 }
 
 export enum Gender {
-  MALE = 'Male',
-  FEMALE = 'Female',
-  OTHER = 'Other',
+  MALE = 'MALE',
+  FEMALE = 'FEMALE',
+  OTHER = 'OTHER',
 }
 
 export enum CivilStatus {
-  SINGLE = 'Single',
-  MARRIED = 'Married',
-  WIDOWED = 'Widowed',
-  SEPARATED = 'Separated',
+  SINGLE = 'SINGLE',
+  MARRIED = 'MARRIED',
+  WIDOWED = 'WIDOWED',
+  SEPARATED = 'SEPARATED',
 }
 
 export interface EmergencyContact {
