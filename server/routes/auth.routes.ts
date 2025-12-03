@@ -5,7 +5,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 const router = Router();
 
 router.post('/login', login);
-router.post('/register', authenticateToken, register); // Only authenticated users (admins) can register new users
+router.post('/register', register); // Public registration
 router.get('/me', authenticateToken, me);
 
 export default router;

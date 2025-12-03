@@ -74,12 +74,26 @@ export const register = async (req: Request, res: Response) => {
         let newEmployee = null;
 
         if (employeeData) {
+            // Extract nested objects
+            const { governmentIds, emergencyContact, ...restEmployeeData } = employeeData;
+
             newEmployee = await prisma.employee.create({
                 data: {
-                    ...employeeData,
-                    birthDate: new Date(employeeData.birthDate),
-                    dateHired: new Date(employeeData.dateHired),
-                    basicSalary: parseFloat(employeeData.basicSalary),
+                    ...restEmployeeData,
+                    birthDate: new Date(restEmployeeData.birthDate),
+                    dateHired: new Date(restEmployeeData.dateHired),
+                    basicSalary: parseFloat(restEmployeeData.basicSalary),
+                    
+                    // Map Government IDs
+                    sssNo: governmentIds?.sss,
+                    philHealthNo: governmentIds?.philHealth,
+                    pagIbigNo: governmentIds?.pagIbig,
+                    tinNo: governmentIds?.tin,
+
+                    // Map Emergency Contact
+                    ecFullName: emergencyContact?.fullName,
+                    ecContactNo: emergencyContact?.contactNumber,
+                    ecRelation: emergencyContact?.relationship,
                 }
             });
         }
