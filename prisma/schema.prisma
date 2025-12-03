@@ -80,6 +80,7 @@ model Employee {
   status        EmployeeStatus @default(ACTIVE)
   dateHired     DateTime
   dateResigned  DateTime?
+  workSchedule  String?
 
   // Compensation
   basicSalary   Float

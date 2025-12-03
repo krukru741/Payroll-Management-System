@@ -3,7 +3,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import EmployeeFormModal from '../components/EmployeeFormModal';
 import { Employee, EmployeeStatus } from '../types';
-import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Lock } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Trash2, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { getScope, hasPermission } from '../utils/rbac';
@@ -14,7 +14,6 @@ const Employees: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   // RBAC Filtering
   const scope = user ? getScope(user.role, 'employees', 'read') : 'none';
@@ -53,14 +52,12 @@ const Employees: React.FC = () => {
   const handleEdit = (employee: Employee) => {
     setEditingId(employee.id);
     setIsModalOpen(true);
-    setActiveMenuId(null);
   };
 
   const handleDelete = (id: string) => {
     if (window.confirm('Are you sure you want to delete this employee? This action cannot be undone.')) {
       deleteEmployee(id);
     }
-    setActiveMenuId(null);
   };
 
   const handleCloseModal = () => {
@@ -176,43 +173,29 @@ const Employees: React.FC = () => {
                   <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-500">
                     {new Date(emp.dateHired).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-2.5 whitespace-nowrap text-right text-sm font-medium relative">
+                  <td className="px-4 py-2.5 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
                       {canUpdate && (
-                        <div className="relative">
-                          <button 
-                            onClick={() => setActiveMenuId(activeMenuId === emp.id ? null : emp.id)}
-                            className={`p-1 rounded transition-colors ${activeMenuId === emp.id ? 'bg-primary-50 text-primary-600' : 'text-gray-400 hover:text-primary-500'}`}
-                          >
-                            <MoreHorizontal size={16} />
-                          </button>
-
-                          {/* Dropdown Menu */}
-                          {activeMenuId === emp.id && (
-                            <>
-                              <div className="fixed inset-0 z-10" onClick={() => setActiveMenuId(null)}></div>
-                              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-20 py-1 text-left">
-                                <button 
-                                  onClick={() => handleEdit(emp)}
-                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                >
-                                  <Edit size={14} className="text-gray-500" /> Edit Details
-                                </button>
-                                {canDelete && (
-                                  <button 
-                                    onClick={() => handleDelete(emp.id)}
-                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                  >
-                                    <Trash2 size={14} className="text-red-500" /> Delete Employee
-                                  </button>
-                                )}
-                              </div>
-                            </>
-                          )}
-                        </div>
+                        <button
+                          onClick={() => handleEdit(emp)}
+                          className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                          title="Edit Employee"
+                        >
+                          <Edit size={16} />
+                        </button>
                       )}
                       
-                      {!canUpdate && <Lock size={14} className="text-gray-300" />}
+                      {canDelete && (
+                        <button
+                          onClick={() => handleDelete(emp.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Delete Employee"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                      
+                      {!canUpdate && !canDelete && <Lock size={14} className="text-gray-300" />}
                     </div>
                   </td>
                 </tr>

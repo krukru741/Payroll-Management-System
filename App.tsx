@@ -7,6 +7,7 @@ import Employees from './pages/Employees';
 import Payroll from './pages/Payroll';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
+import Attendance from './pages/Attendance';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
 import { canAccessRoute } from './utils/rbac';
@@ -39,7 +40,7 @@ const protectedRoutes = [
     { path: "/profile", component: <Profile /> },
     { path: "/employees", component: <Employees /> },
     { path: "/payroll", component: <Payroll /> },
-    { path: "/attendance", component: <Placeholder title="Attendance" /> },
+    { path: "/attendance", component: <Attendance /> },
     { path: "/reports", component: <Placeholder title="Reports" /> },
     { path: "/documents", component: <Placeholder title="Documents" /> },
     { path: "/settings", component: <Placeholder title="Settings" /> },
@@ -56,15 +57,16 @@ const AppContent: React.FC = () => {
     <Layout>
       <Routes>
         {protectedRoutes.map(route => (
-            <Route 
-                key={route.path}
-                path={route.path}
-                element={
-                    <ProtectedRoute path={route.path}>
-                        {route.component}
-                    </ProtectedRoute>
-                }
-            />
+            <React.Fragment key={route.path}>
+                <Route 
+                    path={route.path}
+                    element={
+                        <ProtectedRoute path={route.path}>
+                            {route.component}
+                        </ProtectedRoute>
+                    }
+                />
+            </React.Fragment>
         ))}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

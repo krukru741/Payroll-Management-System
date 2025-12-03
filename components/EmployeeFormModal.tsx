@@ -8,7 +8,7 @@ import {
   Gender,
   CivilStatus,
 } from "../types";
-import { POSITION_DEPARTMENT_MAP } from "../constants";
+import { POSITION_DEPARTMENT_MAP, WORK_SCHEDULES } from "../constants";
 import { Camera, User, Briefcase, DollarSign, AlertCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -76,6 +76,7 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
           dateHired: initialData.dateHired
             ? new Date(initialData.dateHired).toISOString().split("T")[0]
             : "",
+          workSchedule: initialData.workSchedule || "",
           basicSalary: initialData.basicSalary,
 
           sssNo: initialData.governmentIds?.sss || "",
@@ -128,6 +129,7 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
       department: data.department,
       status: data.status,
       dateHired: data.dateHired,
+      workSchedule: data.workSchedule,
       basicSalary: data.basicSalary,
       biMonthlySalary: calculatedBiMonthlySalary,
       ratePerDay: calculatedDailyRate,
@@ -451,6 +453,23 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                     <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                   </svg>
                 </div>
+              </div>
+            </div>
+
+            <div className="col-span-12 md:col-span-6">
+              <label className="label-text">Work Schedule</label>
+              <div className="relative">
+                <input
+                  {...register("workSchedule")}
+                  list="work-schedules"
+                  className="input-field"
+                  placeholder="Select or type schedule"
+                />
+                <datalist id="work-schedules">
+                  {WORK_SCHEDULES.map((schedule) => (
+                    <option key={schedule} value={schedule} />
+                  ))}
+                </datalist>
               </div>
             </div>
           </div>

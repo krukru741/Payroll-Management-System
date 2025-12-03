@@ -57,6 +57,7 @@ export interface Employee {
   department: Department;
   status: EmployeeStatus;
   dateHired: string;
+  workSchedule?: string;
   basicSalary: number;
   avatarUrl: string;
   

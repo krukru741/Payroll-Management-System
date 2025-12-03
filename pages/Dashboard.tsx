@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import { PAYROLL_HISTORY_DATA, COLORS } from '../constants';
-import { Users, DollarSign, Clock, AlertCircle, Calendar, CreditCard, FileText, CheckCircle, Megaphone } from 'lucide-react';
+import { Users, DollarSign, Clock, AlertCircle, Calendar, CreditCard, FileText, CheckCircle, Megaphone, LogIn, LogOut } from 'lucide-react';
 import { 
   BarChart, 
   Bar, 
@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { UserRole, AppUser } from '../types';
+import api from '../lib/axios';
 
 const ANNOUNCEMENTS = [
   {
@@ -224,25 +225,156 @@ const AdminDashboard: React.FC = () => {
           ))}
         </div>
       </Card>
+
+      {/* Footer */}
+      <footer className="mt-6 py-3 border-t border-gray-200 bg-white rounded-lg">
+        <div className="text-center text-sm text-gray-500">
+          <p>© {new Date().getFullYear()} HRIS Payroll Management System. All rights reserved.</p>
+          <p className="mt-1 text-xs">Version 1.0.0 </p>
+        </div>
+      </footer>
     </div>
   );
 };
 
 const EmployeeDashboard: React.FC<{ user: AppUser }> = ({ user }) => {
+  const [attendanceStatus, setAttendanceStatus] = useState<'in' | 'out'>('out');
+  const [loadingAttendance, setLoadingAttendance] = useState(true);
+  const [todayRecord, setTodayRecord] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const response = await api.get('/attendance', {
+          params: {
+            employeeId: user.employeeId,
+            startDate: today,
+            endDate: today
+          }
+        });
+        
+        if (response.data.length > 0) {
+          const record = response.data[0];
+          setTodayRecord(record);
+          if (record.timeIn && !record.timeOut) {
+            setAttendanceStatus('in');
+          } else {
+            setAttendanceStatus('out'); // Either not started or already finished
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch attendance status', error);
+      } finally {
+        setLoadingAttendance(false);
+      }
+    };
+    
+    if (user.employeeId) {
+      fetchStatus();
+    }
+  }, [user.employeeId]);
+
+  const handleClockIn = async () => {
+    if (!user.employeeId) {
+      alert('Your account is not linked to an employee record. Please contact HR.');
+      return;
+    }
+    setLoadingAttendance(true);
+    try {
+      await api.post('/attendance/clock-in', {
+        employeeId: user.employeeId,
+        timestamp: new Date().toISOString()
+      });
+      setAttendanceStatus('in');
+      // Refresh record
+      const today = new Date().toISOString().split('T')[0];
+      const response = await api.get('/attendance', {
+        params: { employeeId: user.employeeId, startDate: today, endDate: today }
+      });
+      if (response.data.length > 0) setTodayRecord(response.data[0]);
+    } catch (error) {
+      console.error('Failed to clock in', error);
+      alert('Failed to clock in');
+    } finally {
+      setLoadingAttendance(false);
+    }
+  };
+
+  const handleClockOut = async () => {
+    if (!user.employeeId) {
+      alert('Your account is not linked to an employee record. Please contact HR.');
+      return;
+    }
+    setLoadingAttendance(true);
+    try {
+      await api.post('/attendance/clock-out', {
+        employeeId: user.employeeId,
+        timestamp: new Date().toISOString()
+      });
+      setAttendanceStatus('out');
+       // Refresh record
+      const today = new Date().toISOString().split('T')[0];
+      const response = await api.get('/attendance', {
+        params: { employeeId: user.employeeId, startDate: today, endDate: today }
+      });
+      if (response.data.length > 0) setTodayRecord(response.data[0]);
+    } catch (error) {
+      console.error('Failed to clock out', error);
+      alert('Failed to clock out');
+    } finally {
+      setLoadingAttendance(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-primary-800 to-primary-600 rounded-lg p-6 text-white shadow-lg relative overflow-hidden">
+      {/* Welcome Section with Clock In/Out */}
+      <div className="bg-gradient-to-r from-primary-800 to-primary-600 rounded-lg p-6 text-white shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="relative z-10">
           <h2 className="text-2xl font-bold mb-1">Welcome back, {user.name.split(' ')[0]}!</h2>
-          <p className="text-primary-100 max-w-xl">
-            You have <span className="font-bold text-white">0</span> pending tasks today. Your next payroll disbursement is scheduled for <span className="font-bold text-white">May 15, 2024</span>.
+          <p className="text-primary-100 max-w-xl mb-4">
+            You have <span className="font-bold text-white">0</span> pending tasks today.
           </p>
-          <div className="mt-4 flex gap-2">
+           <div className="flex gap-2">
              <Button variant="secondary" size="sm">View Payslip</Button>
              <button className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors backdrop-blur-sm">File Leave</button>
-          </div>
+           </div>
         </div>
+        
+        {/* Clock In/Out Card */}
+        <div className="relative z-10 bg-white/10 backdrop-blur-md p-4 rounded-lg border border-white/20 w-full md:w-auto min-w-[200px]">
+            <p className="text-primary-100 text-xs font-medium uppercase tracking-wide mb-2">Time Tracker</p>
+            <div className="text-3xl font-bold mb-1 font-mono">
+                {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <p className="text-xs text-primary-100 mb-3">
+                {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+            
+            {attendanceStatus === 'out' && (!todayRecord || !todayRecord.timeOut) ? (
+                <button 
+                    onClick={handleClockIn}
+                    disabled={loadingAttendance}
+                    className="w-full py-2 bg-green-500 hover:bg-green-600 text-white rounded-md font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                >
+                    <LogIn size={16} /> Clock In
+                </button>
+            ) : attendanceStatus === 'in' ? (
+                <button 
+                    onClick={handleClockOut}
+                    disabled={loadingAttendance}
+                    className="w-full py-2 bg-red-500 hover:bg-red-600 text-white rounded-md font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                >
+                    <LogOut size={16} /> Clock Out
+                </button>
+            ) : (
+                <div className="w-full py-2 bg-gray-500/50 text-white rounded-md font-semibold text-sm flex items-center justify-center gap-2 cursor-not-allowed">
+                    <CheckCircle size={16} /> Completed
+                </div>
+            )}
+        </div>
+
         {/* Decorative Circle */}
         <div className="absolute -right-10 -bottom-20 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
       </div>
@@ -272,10 +404,10 @@ const EmployeeDashboard: React.FC<{ user: AppUser }> = ({ user }) => {
         />
         <StatCard 
           title="Attendance" 
-          value="100%"
-          subtext="This Month"
+          value={todayRecord ? (todayRecord.status === 'PRESENT' ? 'Present' : todayRecord.status) : 'No Record'}
+          subtext="Today"
           icon={CheckCircle}
-          colorClass="bg-teal-500"
+          colorClass={todayRecord ? "bg-teal-500" : "bg-gray-400"}
         />
       </div>
 
@@ -319,6 +451,14 @@ const EmployeeDashboard: React.FC<{ user: AppUser }> = ({ user }) => {
            </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="mt-6 py-3 border-t border-gray-200 bg-white rounded-lg">
+        <div className="text-center text-sm text-gray-500">
+          <p>© {new Date().getFullYear()} HRIS Payroll Management System. All rights reserved.</p>
+          <p className="mt-1 text-xs">Version 1.0.0 </p>
+        </div>
+      </footer>
     </div>
   );
 };

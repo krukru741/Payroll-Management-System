@@ -122,3 +122,11 @@ export const POSITION_DEPARTMENT_MAP: Record<string, string[]> = {
     'Operations Coordinator'
   ]
 };
+
+export const WORK_SCHEDULES = [
+  'Mon-Fri 8:00 AM - 5:00 PM',
+  'Mon-Fri 9:00 AM - 6:00 PM',
+  'Mon-Sat 8:00 AM - 5:00 PM',
+  'Flexible Schedule',
+  'Shift Based'
+];

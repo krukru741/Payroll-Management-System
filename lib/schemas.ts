@@ -24,6 +24,7 @@ export const employmentSchema = z.object({
   department: z.nativeEnum(Department),
   dateHired: z.string().min(1, 'Date hired is required'),
   status: z.nativeEnum(EmployeeStatus),
+  workSchedule: z.string().optional(),
   basicSalary: z.number().min(0, 'Salary must be a positive number'),
 });
 

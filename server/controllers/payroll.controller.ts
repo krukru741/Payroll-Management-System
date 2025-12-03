@@ -112,3 +112,44 @@ export const finalizePayroll = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to finalize payroll' });
   }
 };
+
+export const saveAndFinalizePayroll = async (req: Request, res: Response) => {
+  try {
+    const { payrolls, periodStart, periodEnd } = req.body;
+
+    const savedPayrolls = await prisma.$transaction(
+      payrolls.map((p: any) => prisma.payroll.create({
+        data: {
+          employeeId: p.emp.id,
+          periodStart: new Date(periodStart),
+          periodEnd: new Date(periodEnd),
+          payoutDate: new Date(),
+          basicPay: p.emp.basicSalary / 2,
+          overtimePay: p.grossPay - (p.emp.basicSalary / 2),
+          allowances: 0,
+          grossPay: p.grossPay,
+          
+          sssDeduction: p.deductions.sss,
+          philHealthDeduction: p.deductions.philHealth,
+          pagIbigDeduction: p.deductions.pagIbig,
+          taxDeduction: p.deductions.tax,
+          otherDeductions: 0,
+          totalDeductions: p.deductions.total,
+          
+          netPay: p.netPay,
+          
+          erSSS: p.employerContributions.sss,
+          erPhilHealth: p.employerContributions.philHealth,
+          erPagIbig: p.employerContributions.pagIbig,
+          
+          status: 'FINALIZED'
+        }
+      }))
+    );
+
+    res.json({ success: true, count: savedPayrolls.length });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to finalize payroll' });
+  }
+};
