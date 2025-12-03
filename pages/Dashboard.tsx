@@ -154,7 +154,7 @@ const AdminDashboard: React.FC = () => {
         <div className="lg:col-span-2">
           <Card title="Payroll History (6 Months)">
             <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={PAYROLL_HISTORY_DATA} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} />
@@ -175,7 +175,7 @@ const AdminDashboard: React.FC = () => {
           <Card title="Department Headcount">
             <div className="h-80 w-full flex items-center justify-center">
               {dynamicDeptDistribution.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <PieChart>
                     <Pie
                       data={dynamicDeptDistribution}
