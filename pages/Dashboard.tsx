@@ -67,7 +67,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, subtext, icon: Icon, 
   </div>
 );
 
-const AnnouncementItem = ({ item }: { item: typeof ANNOUNCEMENTS[0] }) => (
+const AnnouncementItem: React.FC<{ item: typeof ANNOUNCEMENTS[0] }> = ({ item }) => (
   <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 hover:border-primary-200 transition-colors">
      <div className="flex justify-between items-start mb-2">
         <h4 className="font-semibold text-gray-900 flex items-center gap-2">
