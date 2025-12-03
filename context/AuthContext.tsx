@@ -18,9 +18,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const checkAuth = async () => {
+      console.log('[AuthContext] Starting auth check...');
       const token = localStorage.getItem('token');
+      console.log('[AuthContext] Token exists:', !!token);
       if (token) {
         try {
+          console.log('[AuthContext] Calling /auth/me...');
           const response = await api.get('/auth/me');
           setUser(response.data.user);
         } catch (error) {
@@ -28,6 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.removeItem('token');
         }
       }
+      console.log('[AuthContext] Setting loading to false');
       setLoading(false);
     };
 

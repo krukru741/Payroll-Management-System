@@ -9,9 +9,11 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
     
+    console.log('Attempting login for:', username);
     const user = await prisma.user.findUnique({
       where: { username },
     });
+    console.log('User found:', user ? 'yes' : 'no');
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -33,7 +35,8 @@ export const login = async (req: Request, res: Response) => {
 
     res.json({ token, user: userWithoutPassword });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Login error details:', error);
+    res.status(500).json({ error: 'Internal server error', details: String(error) });
   }
 };
 

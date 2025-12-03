@@ -1,0 +1,4 @@
+-- Grant permissions to hris_user
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO hris_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO hris_user;
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO hris_user;
