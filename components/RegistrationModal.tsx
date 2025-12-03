@@ -258,7 +258,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
             <label className="label-text">Username *</label>
             <div className="relative">
                 <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input {...register('username')} className={`input-field pl-10 ${errors.username ? 'border-red-500' : ''}`} />
+                <input autoComplete="username" {...register('username')} className={`input-field pl-10 ${errors.username ? 'border-red-500' : ''}`} />
             </div>
             {errors.username && <span className="text-xs text-red-500">{errors.username.message}</span>}
           </div>
@@ -267,7 +267,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                 <label className="label-text">Password *</label>
                 <div className="relative">
                     <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input type="password" {...register('password')} className={`input-field pl-10 ${errors.password ? 'border-red-500' : ''}`} />
+                    <input type="password" autoComplete="new-password" {...register('password')} className={`input-field pl-10 ${errors.password ? 'border-red-500' : ''}`} />
                 </div>
                 {errors.password && <span className="text-xs text-red-500">{errors.password.message}</span>}
              </div>
@@ -275,7 +275,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                 <label className="label-text">Confirm Password *</label>
                 <div className="relative">
                     <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input type="password" {...register('confirmPassword')} className={`input-field pl-10 ${errors.confirmPassword ? 'border-red-500' : ''}`} />
+                    <input type="password" autoComplete="new-password" {...register('confirmPassword')} className={`input-field pl-10 ${errors.confirmPassword ? 'border-red-500' : ''}`} />
                 </div>
                 {errors.confirmPassword && <span className="text-xs text-red-500">{errors.confirmPassword.message}</span>}
              </div>

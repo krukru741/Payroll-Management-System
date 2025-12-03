@@ -166,11 +166,7 @@ const Login: React.FC = () => {
             </Button>
           </form>
           
-          <div className="mt-6 text-center">
-            <p className="text-xs text-gray-400">
-              Default Admin: <strong>admin</strong> / <strong>password123</strong>
-            </p>
-          </div>
+
         </div>
       </div>
       
