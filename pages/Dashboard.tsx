@@ -55,28 +55,28 @@ interface StatCardProps {
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, subtext, icon: Icon, colorClass }) => (
-  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-start justify-between hover:shadow-md transition-shadow">
+  <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 flex items-start justify-between hover:shadow-md transition-shadow">
     <div>
-      <p className="text-sm font-medium text-gray-500">{title}</p>
-      <h3 className="text-2xl font-bold text-gray-900 mt-2">{value}</h3>
-      <p className="text-xs text-gray-500 mt-1">{subtext}</p>
+      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{title}</p>
+      <h3 className="text-xl font-bold text-gray-900 mt-1">{value}</h3>
+      <p className="text-xs text-gray-500 mt-0.5">{subtext}</p>
     </div>
-    <div className={`p-3 rounded-lg ${colorClass}`}>
+    <div className={`p-2 rounded-lg ${colorClass}`}>
       <Icon size={24} className="text-white" />
     </div>
   </div>
 );
 
 const AnnouncementItem: React.FC<{ item: typeof ANNOUNCEMENTS[0] }> = ({ item }) => (
-  <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 hover:border-primary-200 transition-colors">
-     <div className="flex justify-between items-start mb-2">
-        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-primary-200 transition-colors">
+     <div className="flex justify-between items-start mb-1.5">
+        <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
           {item.type === 'Important' && <AlertCircle size={14} className="text-red-500" />}
           {item.title}
         </h4>
         <span className="text-xs text-gray-400 whitespace-nowrap ml-2">{item.date}</span>
      </div>
-     <p className="text-sm text-gray-600 mb-3 leading-relaxed">{item.content}</p>
+     <p className="text-xs text-gray-600 mb-2 leading-relaxed">{item.content}</p>
      <div className="flex items-center justify-between">
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
             item.type === 'Important' ? 'bg-red-50 text-red-700 border-red-100' :
@@ -116,9 +116,9 @@ const AdminDashboard: React.FC = () => {
   }, [employees]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard 
           title="Total Employees" 
           value={stats.totalEmployees}
@@ -149,11 +149,11 @@ const AdminDashboard: React.FC = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Main Chart */}
         <div className="lg:col-span-2">
           <Card title="Payroll History (6 Months)">
-            <div className="h-80 w-full">
+            <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={PAYROLL_HISTORY_DATA} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
@@ -173,7 +173,7 @@ const AdminDashboard: React.FC = () => {
         {/* Secondary Chart */}
         <div className="lg:col-span-1">
           <Card title="Department Headcount">
-            <div className="h-80 w-full flex items-center justify-center">
+            <div className="h-64 w-full flex items-center justify-center">
               {dynamicDeptDistribution.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <PieChart>
@@ -230,17 +230,17 @@ const AdminDashboard: React.FC = () => {
 
 const EmployeeDashboard: React.FC<{ user: AppUser }> = ({ user }) => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-primary-800 to-primary-600 rounded-xl p-8 text-white shadow-lg relative overflow-hidden">
+      <div className="bg-gradient-to-r from-primary-800 to-primary-600 rounded-lg p-6 text-white shadow-lg relative overflow-hidden">
         <div className="relative z-10">
-          <h2 className="text-3xl font-bold mb-2">Welcome back, {user.name.split(' ')[0]}!</h2>
+          <h2 className="text-2xl font-bold mb-1">Welcome back, {user.name.split(' ')[0]}!</h2>
           <p className="text-primary-100 max-w-xl">
             You have <span className="font-bold text-white">0</span> pending tasks today. Your next payroll disbursement is scheduled for <span className="font-bold text-white">May 15, 2024</span>.
           </p>
-          <div className="mt-6 flex gap-3">
+          <div className="mt-4 flex gap-2">
              <Button variant="secondary" size="sm">View Payslip</Button>
-             <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors backdrop-blur-sm">File Leave</button>
+             <button className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors backdrop-blur-sm">File Leave</button>
           </div>
         </div>
         {/* Decorative Circle */}
@@ -248,7 +248,7 @@ const EmployeeDashboard: React.FC<{ user: AppUser }> = ({ user }) => {
       </div>
 
       {/* Personal Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard 
           title="Next Payday" 
           value="May 15"
@@ -279,7 +279,7 @@ const EmployeeDashboard: React.FC<{ user: AppUser }> = ({ user }) => {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Announcement Wall */}
         <div className="lg:col-span-2">
            <Card title="Announcement Wall">
@@ -295,7 +295,7 @@ const EmployeeDashboard: React.FC<{ user: AppUser }> = ({ user }) => {
         </div>
 
         {/* Quick Links / Reminders */}
-        <div className="space-y-6">
+        <div className="space-y-4">
            <Card title="Reminders">
              <div className="space-y-3">
                <div className="p-3 bg-yellow-50 border border-yellow-100 rounded-lg text-sm text-yellow-800">
@@ -309,8 +309,8 @@ const EmployeeDashboard: React.FC<{ user: AppUser }> = ({ user }) => {
              </div>
            </Card>
 
-           <div className="bg-primary-900 rounded-xl p-6 text-white relative overflow-hidden">
-              <h3 className="font-bold text-lg relative z-10">Need Assistance?</h3>
+           <div className="bg-primary-900 rounded-lg p-4 text-white relative overflow-hidden">
+              <h3 className="font-bold text-base relative z-10">Need Assistance?</h3>
               <p className="text-sm text-primary-200 mt-2 relative z-10 mb-4">Contact HR for payroll discrepancies or filing concerns.</p>
               <Button size="sm" variant="secondary" className="w-full relative z-10">Contact Support</Button>
               <div className="absolute top-0 right-0 p-4 opacity-10">

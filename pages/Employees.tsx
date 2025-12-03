@@ -3,7 +3,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import EmployeeFormModal from '../components/EmployeeFormModal';
 import { Employee, EmployeeStatus } from '../types';
-import { Plus, Search, Filter, MoreHorizontal, Mail, Edit, Trash2, Lock } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { getScope, hasPermission } from '../utils/rbac';
@@ -95,10 +95,10 @@ const Employees: React.FC = () => {
   if (loading) return <div>Loading employees...</div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Employees</h2>
+          <h2 className="text-xl font-bold text-gray-900">Employees</h2>
           <p className="text-gray-500 text-sm">Manage your team members and their roles.</p>
         </div>
         {canCreate && (
@@ -111,13 +111,13 @@ const Employees: React.FC = () => {
 
       <Card className="p-0">
         {/* Toolbar */}
-        <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-4 justify-between bg-white">
+        <div className="p-3 border-b border-gray-100 flex flex-col sm:flex-row gap-3 justify-between bg-white">
           <div className="relative w-full sm:w-96">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <input 
               type="text"
               placeholder="Search by name or department..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -129,59 +129,55 @@ const Employees: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto min-h-[400px]">
+        <div className="overflow-visible min-h-\[350px\]">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Employee ID</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">First Name</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Name</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Position</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Department</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Hired</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Employee ID</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">First Name</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Name</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Position</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Department</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Hired</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredEmployees.map((emp) => (
                 <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">
+                  <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-500 font-medium">
                     {emp.id}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-2.5 whitespace-nowrap">
                     <div className="flex items-center">
-                      <img className="h-8 w-8 rounded-full object-cover border border-gray-200 mr-3" src={emp.avatarUrl} alt="" />
+                      <img className="h-7 w-7 rounded-full object-cover border border-gray-200 mr-2" src={emp.avatarUrl} alt="" />
                       <div className="text-sm font-medium text-gray-900">{emp.firstName}</div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-900">
                     {emp.lastName}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-500">
                     {emp.email}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-900">
                     {emp.position}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-500">
                     {emp.department}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-2.5 whitespace-nowrap">
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(emp.status)}`}>
                       {emp.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-500">
                     {new Date(emp.dateHired).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
+                  <td className="px-4 py-2.5 whitespace-nowrap text-right text-sm font-medium relative">
                     <div className="flex items-center justify-end gap-2">
-                      <a href={`mailto:${emp.email}`} className="text-gray-400 hover:text-primary-500 p-1" title="Send Email">
-                        <Mail size={16} />
-                      </a>
-                      
                       {canUpdate && (
                         <div className="relative">
                           <button 
@@ -233,7 +229,7 @@ const Employees: React.FC = () => {
         </div>
         
         {/* Pagination placeholder */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+        <div className="px-4 py-2.5 border-t border-gray-100 flex items-center justify-between">
           <span className="text-sm text-gray-500">Showing {filteredEmployees.length} of {accessibleEmployees.length} results</span>
           <div className="flex gap-2">
              <Button variant="outline" size="sm" disabled>Previous</Button>

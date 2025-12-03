@@ -1,0 +1,288 @@
+/* Compact Design System for HRIS Payroll Management */
+
+/* ===== CSS Variables ===== */
+:root {
+  /* Compact spacing */
+  --spacing-xs: 0.25rem; /* 4px */
+  --spacing-sm: 0.5rem; /* 8px */
+  --spacing-md: 0.75rem; /* 12px */
+  --spacing-lg: 1rem; /* 16px */
+  --spacing-xl: 1.5rem; /* 24px */
+
+  /* Compact typography */
+  --font-xs: 0.7rem; /* 11.2px */
+  --font-sm: 0.75rem; /* 12px */
+  --font-base: 0.875rem; /* 14px */
+  --font-lg: 1rem; /* 16px */
+  --font-xl: 1.125rem; /* 18px */
+
+  /* Line heights */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+
+  /* Colors */
+  --primary: #076653;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-900: #111827;
+}
+
+/* ===== Base Resets ===== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Compact Utility Classes ===== */
+
+/* Card Styles */
+.card-compact {
+  padding: var(--spacing-md);
+  border-radius: 0.5rem;
+  background: white;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.card-compact-sm {
+  padding: var(--spacing-sm);
+  border-radius: 0.5rem;
+  background: white;
+  border: 1px solid var(--gray-200);
+}
+
+/* Section Headers */
+.section-header-compact {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray-700);
+  margin-bottom: var(--spacing-sm);
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* Form Labels */
+.label-compact {
+  display: block;
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--spacing-xs);
+}
+
+/* Input Fields */
+.input-compact {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-sm);
+  border-radius: 0.5rem;
+  border: 1px solid var(--gray-200);
+  background: var(--gray-50);
+  transition: all 0.2s;
+}
+
+.input-compact:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(7, 102, 83, 0.1);
+}
+
+/* Buttons */
+.btn-compact {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.btn-compact-sm {
+  padding: 0.375rem var(--spacing-sm);
+  font-size: var(--font-xs);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #065544;
+}
+
+.btn-outline {
+  background: white;
+  color: var(--gray-700);
+  border: 1px solid var(--gray-200);
+}
+
+.btn-outline:hover {
+  background: var(--gray-50);
+}
+
+/* Table Styles */
+.table-compact {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-compact th {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  text-align: left;
+  color: var(--gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.table-compact td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-sm);
+  color: var(--gray-900);
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.table-compact tr:hover {
+  background: var(--gray-50);
+}
+
+/* Spacing Utilities */
+.space-y-compact > * + * {
+  margin-top: var(--spacing-md);
+}
+
+.space-y-compact-sm > * + * {
+  margin-top: var(--spacing-sm);
+}
+
+.gap-compact {
+  gap: var(--spacing-md);
+}
+
+.gap-compact-sm {
+  gap: var(--spacing-sm);
+}
+
+/* Grid Utilities */
+.grid-compact {
+  display: grid;
+  gap: var(--spacing-md);
+}
+
+.grid-compact-sm {
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
+/* Text Utilities */
+.text-compact-xs {
+  font-size: var(--font-xs);
+  line-height: var(--leading-tight);
+}
+
+.text-compact-sm {
+  font-size: var(--font-sm);
+  line-height: var(--leading-normal);
+}
+
+.text-compact-base {
+  font-size: var(--font-base);
+  line-height: var(--leading-normal);
+}
+
+/* Modal Compact */
+.modal-compact .modal-content {
+  padding: var(--spacing-lg);
+}
+
+.modal-compact .modal-header {
+  font-size: var(--font-lg);
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.modal-compact .modal-body {
+  margin-bottom: var(--spacing-md);
+}
+
+.modal-compact .modal-footer {
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--gray-200);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+/* Badge Compact */
+.badge-compact {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem var(--spacing-sm);
+  font-size: var(--font-xs);
+  font-weight: 500;
+  border-radius: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.badge-success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-info {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+/* Responsive Utilities */
+@media (max-width: 768px) {
+  .card-compact {
+    padding: var(--spacing-sm);
+  }
+
+  .table-compact th,
+  .table-compact td {
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+}
