@@ -83,6 +83,7 @@ model Employee {
 
   // Compensation
   basicSalary   Float
+  biMonthlySalary Float?
   ratePerHour   Float?
   ratePerDay    Float?
 

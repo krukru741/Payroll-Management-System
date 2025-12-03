@@ -20,6 +20,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const { isAuthenticated } = useAuth();
 
+  // Transform flat database fields to nested Employee structure
+  const transformEmployee = (dbEmployee: any): Employee => {
+    return {
+      ...dbEmployee,
+      governmentIds: {
+        sss: dbEmployee.sssNo || '',
+        philHealth: dbEmployee.philHealthNo || '',
+        pagIbig: dbEmployee.pagIbigNo || '',
+        tin: dbEmployee.tinNo || ''
+      },
+      emergencyContact: {
+        fullName: dbEmployee.ecFullName || '',
+        contactNumber: dbEmployee.ecContactNo || '',
+        relationship: dbEmployee.ecRelation || ''
+      }
+    };
+  };
+
   const fetchEmployees = async () => {
     if (!isAuthenticated) {
       setLoading(false);
@@ -28,7 +46,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       const response = await api.get('/employees');
-      setEmployees(response.data);
+      const transformedEmployees = response.data.map(transformEmployee);
+      setEmployees(transformedEmployees);
     } catch (error) {
       console.error('Failed to fetch employees', error);
     } finally {
@@ -43,7 +62,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addEmployee = async (employee: Employee) => {
     try {
       const response = await api.post('/employees', employee);
-      setEmployees(prev => [...prev, response.data]);
+      const transformedEmployee = transformEmployee(response.data);
+      setEmployees(prev => [...prev, transformedEmployee]);
     } catch (error) {
       console.error('Failed to add employee', error);
       throw error;
@@ -52,9 +72,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateEmployee = async (updatedEmployee: Employee) => {
     try {
-      const response = await api.put(`/employees/${updatedEmployee.id}`, updatedEmployee);
+      // Remove nested objects and send only flat fields to backend
+      const { governmentIds, emergencyContact, ...flatEmployee } = updatedEmployee;
+      
+      const response = await api.put(`/employees/${updatedEmployee.id}`, flatEmployee);
+      const transformedEmployee = transformEmployee(response.data);
       setEmployees(prev => prev.map(emp => 
-        emp.id === updatedEmployee.id ? response.data : emp
+        emp.id === updatedEmployee.id ? transformedEmployee : emp
       ));
     } catch (error) {
       console.error('Failed to update employee', error);

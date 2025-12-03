@@ -78,19 +78,23 @@ export const updateEmployee = async (req: Request, res: Response) => {
     const { id } = req.params;
     const data = req.body;
 
-    // Remove fields that shouldn't be updated directly or handle conversions
-    if (data.birthDate) data.birthDate = new Date(data.birthDate);
-    if (data.dateHired) data.dateHired = new Date(data.dateHired);
-    if (data.dateResigned) data.dateResigned = new Date(data.dateResigned);
-    if (data.basicSalary) data.basicSalary = parseFloat(data.basicSalary);
+    // Remove fields that shouldn't be updated
+    const { user, createdAt, updatedAt, avatarUrl, ...updateData } = data;
+
+    // Handle date conversions
+    if (updateData.birthDate) updateData.birthDate = new Date(updateData.birthDate);
+    if (updateData.dateHired) updateData.dateHired = new Date(updateData.dateHired);
+    if (updateData.dateResigned) updateData.dateResigned = new Date(updateData.dateResigned);
+    if (updateData.basicSalary) updateData.basicSalary = parseFloat(updateData.basicSalary);
 
     const employee = await prisma.employee.update({
       where: { id },
-      data
+      data: updateData
     });
 
     res.json(employee);
   } catch (error) {
+    console.error('Error updating employee:', error);
     res.status(500).json({ error: 'Failed to update employee' });
   }
 };
