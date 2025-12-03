@@ -42,7 +42,7 @@ export const login = async (req: Request, res: Response) => {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { username, password, email, name, role } = req.body;
+    const { username, password, email, name, role, employeeData } = req.body;
 
     // Check if user exists
     const existingUser = await prisma.user.findFirst({
@@ -58,22 +58,53 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Username or email already exists' });
     }
 
+    if (employeeData) {
+        // Check if employee email exists
+        const existingEmployee = await prisma.employee.findUnique({
+            where: { email: employeeData.email }
+        });
+        if (existingEmployee) {
+            return res.status(400).json({ error: 'Employee email already exists' });
+        }
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.create({
-      data: {
-        username,
-        password: hashedPassword,
-        email,
-        name,
-        role: role || 'EMPLOYEE',
-      },
+    const result = await prisma.$transaction(async (prisma) => {
+        let newEmployee = null;
+
+        if (employeeData) {
+            newEmployee = await prisma.employee.create({
+                data: {
+                    ...employeeData,
+                    birthDate: new Date(employeeData.birthDate),
+                    dateHired: new Date(employeeData.dateHired),
+                    basicSalary: parseFloat(employeeData.basicSalary),
+                }
+            });
+        }
+
+        const user = await prisma.user.create({
+            data: {
+                id: req.body.id, // Allow client-generated ID if provided
+                username,
+                password: hashedPassword,
+                email,
+                name,
+                role: role || 'EMPLOYEE',
+                employeeId: newEmployee?.id,
+                avatarUrl: newEmployee?.avatarUrl
+            },
+        });
+
+        return user;
     });
 
-    const { password: _, ...userWithoutPassword } = user;
+    const { password: _, ...userWithoutPassword } = result;
     res.json({ user: userWithoutPassword });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Internal server error', details: String(error) });
   }
 };
 

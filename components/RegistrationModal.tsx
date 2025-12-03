@@ -99,10 +99,8 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
       };
 
       // Add to HR Database
-      addEmployee(newEmployee);
-
-      // Create User Account for Login
-      const newUser: AppUser = {
+      // Create User Account for Login with Employee Data
+      const newUser: AppUser & { employeeData: Employee } = {
         id: newUserId,
         name: `${data.firstName} ${data.lastName}`,
         email: data.email,
@@ -112,7 +110,8 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
         department: data.department,
         position: data.position,
         employeeId: newEmployeeId, // Link to employee record
-        avatarUrl: newEmployee.avatarUrl
+        avatarUrl: newEmployee.avatarUrl,
+        employeeData: newEmployee // Pass full employee data to backend
       };
 
       await registerUser(newUser);
