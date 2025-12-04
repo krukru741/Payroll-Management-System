@@ -9,6 +9,7 @@ type Module =
   | 'cash_advance' 
   | 'documents' 
   | 'reports' 
+  | 'analytics'
   | 'settings' 
   | 'users' 
   | 'audit_logs';
@@ -27,6 +28,7 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Module, { [key in Action]?: S
     users: { create: 'all', read: 'all', update: 'all', delete: 'all' },
     audit_logs: { read: 'all' },
     reports: { read: 'all' },
+    analytics: { read: 'all' },
     documents: { create: 'all', read: 'all', delete: 'all' }
   },
   [UserRole.MANAGER]: {
@@ -36,6 +38,7 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Module, { [key in Action]?: S
     leave_requests: { read: 'team', approve: 'team' },
     settings: { read: 'all' },
     reports: { read: 'team' },
+    analytics: { read: 'team' },
     documents: { read: 'team' }
   },
   [UserRole.EMPLOYEE]: {
@@ -64,6 +67,7 @@ const ROUTE_MODULE_MAP: Record<string, Module> = {
     '/payroll': 'payroll',
     '/filing': 'leave_requests', // Filing page uses leave_requests permissions
     '/reports': 'reports',
+    '/analytics': 'analytics',
     '/documents': 'documents',
     '/settings': 'settings',
     '/users': 'users',

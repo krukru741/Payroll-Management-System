@@ -6,7 +6,8 @@ import {
   CalendarClock, 
   FileText, 
   Settings,
-  PieChart
+  PieChart,
+  BarChart
 } from 'lucide-react';
 
 export const MOCK_PAYROLL_SUMMARY: PayrollSummary = {
@@ -24,6 +25,7 @@ export const NAV_ITEMS = [
   { label: 'Attendance', path: '/attendance', icon: CalendarClock },
   { label: 'Payroll', path: '/payroll', icon: Banknote },
   { label: 'Filing', path: '/filing', icon: FileText },
+  { label: 'Analytics', path: '/analytics', icon: BarChart },
   { label: 'Reports', path: '/reports', icon: PieChart },
   { label: 'Documents', path: '/documents', icon: FileText },
   { label: 'Settings', path: '/settings', icon: Settings },

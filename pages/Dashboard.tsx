@@ -95,6 +95,17 @@ const AnnouncementItem: React.FC<{ item: typeof ANNOUNCEMENTS[0] }> = ({ item })
 
 const AdminDashboard: React.FC = () => {
   const { employees } = useData();
+  const [adminStats, setAdminStats] = useState({
+    pendingRequests: 0,
+    payrollHistory: [],
+    attendanceRate: 0
+  });
+
+  useEffect(() => {
+    api.get('/analytics/admin-dashboard')
+      .then(res => setAdminStats(res.data))
+      .catch(err => console.error('Failed to fetch admin stats', err));
+  }, []);
 
   const stats = useMemo(() => {
     const totalEmployees = employees.length;
@@ -135,15 +146,15 @@ const AdminDashboard: React.FC = () => {
           colorClass="bg-secondary-400 text-primary-900"
         />
         <StatCard 
-          title="On Time %" 
-          value="100%"
-          subtext="Target met"
+          title="Attendance Rate" 
+          value={`${adminStats.attendanceRate}%`}
+          subtext="Present today"
           icon={Clock}
           colorClass="bg-primary-800"
         />
         <StatCard 
           title="Pending Requests" 
-          value="0"
+          value={adminStats.pendingRequests}
           subtext="Leaves & Adjustments"
           icon={AlertCircle}
           colorClass="bg-orange-500"
@@ -156,13 +167,13 @@ const AdminDashboard: React.FC = () => {
           <Card title="Payroll History (6 Months)">
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <BarChart data={PAYROLL_HISTORY_DATA} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <BarChart data={adminStats.payrollHistory.length > 0 ? adminStats.payrollHistory : PAYROLL_HISTORY_DATA} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} />
                   <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `₱${value/1000}k`} />
                   <Tooltip 
                     cursor={{ fill: '#F3F4F6' }}
-                    formatter={(value: number) => [`₱${value.toLocaleString()}`, 'Total']}
+                    formatter={(value: number) => [`₱${value.toLocaleString()}`, 'Total Net Pay']}
                   />
                   <Bar dataKey="amount" fill="#076653" radius={[4, 4, 0, 0]} barSize={40} />
                 </BarChart>
@@ -241,37 +252,49 @@ const EmployeeDashboard: React.FC<{ user: AppUser }> = ({ user }) => {
   const [attendanceStatus, setAttendanceStatus] = useState<'in' | 'out'>('out');
   const [loadingAttendance, setLoadingAttendance] = useState(true);
   const [todayRecord, setTodayRecord] = useState<any>(null);
+  const [stats, setStats] = useState({
+    pendingTasks: 0,
+    nextPayday: '-',
+    latestNetPay: 0,
+    leaveCredits: 0
+  });
 
   useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const response = await api.get('/attendance', {
-          params: {
-            employeeId: user.employeeId,
-            startDate: today,
-            endDate: today
-          }
-        });
-        
-        if (response.data.length > 0) {
-          const record = response.data[0];
-          setTodayRecord(record);
-          if (record.timeIn && !record.timeOut) {
-            setAttendanceStatus('in');
-          } else {
-            setAttendanceStatus('out'); // Either not started or already finished
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch attendance status', error);
-      } finally {
-        setLoadingAttendance(false);
-      }
-    };
-    
     if (user.employeeId) {
+      // Fetch attendance status
+      const fetchStatus = async () => {
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const response = await api.get('/attendance', {
+            params: {
+              employeeId: user.employeeId,
+              startDate: today,
+              endDate: today
+            }
+          });
+          
+          if (response.data.length > 0) {
+            const record = response.data[0];
+            setTodayRecord(record);
+            if (record.timeIn && !record.timeOut) {
+              setAttendanceStatus('in');
+            } else {
+              setAttendanceStatus('out');
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch attendance status', error);
+        } finally {
+          setLoadingAttendance(false);
+        }
+      };
+      
       fetchStatus();
+
+      // Fetch dashboard stats
+      api.get(`/employees/${user.employeeId}/dashboard-stats`)
+        .then(res => setStats(res.data))
+        .catch(err => console.error('Failed to fetch stats', err));
     }
   }, [user.employeeId]);
 
@@ -334,7 +357,7 @@ const EmployeeDashboard: React.FC<{ user: AppUser }> = ({ user }) => {
         <div className="relative z-10">
           <h2 className="text-2xl font-bold mb-1">Welcome back, {user.name.split(' ')[0]}!</h2>
           <p className="text-primary-100 max-w-xl mb-4">
-            You have <span className="font-bold text-white">0</span> pending tasks today.
+            You have <span className="font-bold text-white">{stats.pendingTasks}</span> pending tasks today.
           </p>
            <div className="flex gap-2">
              <Button variant="secondary" size="sm">View Payslip</Button>
@@ -383,21 +406,21 @@ const EmployeeDashboard: React.FC<{ user: AppUser }> = ({ user }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard 
           title="Next Payday" 
-          value="May 15"
-          subtext="Friday"
+          value={stats.nextPayday}
+          subtext="Upcoming"
           icon={Calendar}
           colorClass="bg-primary-500"
         />
         <StatCard 
           title="Latest Net Pay" 
-          value="₱0.00"
-          subtext="No records yet"
+          value={`₱${stats.latestNetPay.toLocaleString()}`}
+          subtext="Last Period"
           icon={CreditCard}
           colorClass="bg-green-600"
         />
         <StatCard 
           title="Leave Credits" 
-          value="15.0"
+          value={stats.leaveCredits.toFixed(1)}
           subtext="Available Days"
           icon={FileText}
           colorClass="bg-blue-500"
