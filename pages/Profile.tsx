@@ -1,13 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import api from '../lib/axios';
 import { User, Briefcase, FileText, Heart, MapPin, Phone, Mail, Calendar, Clock } from 'lucide-react';
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
   const { getEmployeeById } = useData();
   const [activeTab, setActiveTab] = useState('personal');
+  const [todayAttendance, setTodayAttendance] = useState<any>(null);
+  const [loadingAttendance, setLoadingAttendance] = useState(true);
+
+  // Fetch today's attendance - MUST be before any conditional returns
+  useEffect(() => {
+    const fetchTodayAttendance = async () => {
+      if (!user?.employeeId) {
+        setLoadingAttendance(false);
+        return;
+      }
+
+      try {
+        setLoadingAttendance(true);
+        const today = new Date().toISOString().split('T')[0];
+        const response = await api.get('/attendance', {
+          params: {
+            employeeId: user.employeeId,
+            date: today
+          }
+        });
+        
+        // Get today's attendance (first record if exists)
+        if (response.data && response.data.length > 0) {
+          console.log('Today\'s attendance data:', response.data[0]);
+          setTodayAttendance(response.data[0]);
+        } else {
+          console.log('No attendance data found for today');
+        }
+      } catch (error) {
+        console.error('Failed to fetch attendance:', error);
+      } finally {
+        setLoadingAttendance(false);
+      }
+    };
+
+    fetchTodayAttendance();
+  }, [user?.employeeId]);
 
   if (!user || !user.employeeId) {
     return (
@@ -177,19 +215,43 @@ const Profile: React.FC = () => {
           </Card>
 
           <Card title="Today's Attendance">
-            <div className="flex justify-between items-center">
-                <span className="text-xs font-medium text-gray-500 uppercase">Time In</span>
-                <span className="font-semibold text-gray-800 text-sm">08:05 AM</span>
-            </div>
-            <div className="flex justify-between items-center mt-2">
-                <span className="text-xs font-medium text-gray-500 uppercase">Time Out</span>
-                <span className="font-semibold text-red-500 text-sm">--:--</span>
-            </div>
-            <div className="mt-3 pt-3 border-t border-gray-100 text-center">
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-800 uppercase tracking-wide">
-                    On Duty
-                </span>
-            </div>
+            {loadingAttendance ? (
+              <div className="text-center text-sm text-gray-500 py-4">Loading...</div>
+            ) : todayAttendance ? (
+              <>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-medium text-gray-500 uppercase">Time In</span>
+                  <span className="font-semibold text-gray-800 text-sm">
+                    {todayAttendance.timeIn 
+                      ? new Date(todayAttendance.timeIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+                      : '--:--'
+                    }
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase">Time Out</span>
+                  <span className={`font-semibold text-sm ${todayAttendance.timeOut ? 'text-gray-800' : 'text-red-500'}`}>
+                    {todayAttendance.timeOut 
+                      ? new Date(todayAttendance.timeOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+                      : '--:--'
+                    }
+                  </span>
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-100 text-center">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+                    todayAttendance.timeOut 
+                      ? 'bg-gray-100 text-gray-800' 
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {todayAttendance.timeOut ? 'Clocked Out' : 'On Duty'}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="text-center text-sm text-gray-500 py-4">
+                No attendance record for today
+              </div>
+            )}
           </Card>
       </div>
     </div>

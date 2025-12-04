@@ -62,6 +62,7 @@ const ROUTE_MODULE_MAP: Record<string, Module> = {
     '/employees': 'employees',
     '/attendance': 'attendance',
     '/payroll': 'payroll',
+    '/filing': 'leave_requests', // Filing page uses leave_requests permissions
     '/reports': 'reports',
     '/documents': 'documents',
     '/settings': 'settings',

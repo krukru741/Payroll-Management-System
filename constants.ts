@@ -23,6 +23,7 @@ export const NAV_ITEMS = [
   { label: 'Employees', path: '/employees', icon: Users },
   { label: 'Attendance', path: '/attendance', icon: CalendarClock },
   { label: 'Payroll', path: '/payroll', icon: Banknote },
+  { label: 'Filing', path: '/filing', icon: FileText },
   { label: 'Reports', path: '/reports', icon: PieChart },
   { label: 'Documents', path: '/documents', icon: FileText },
   { label: 'Settings', path: '/settings', icon: Settings },

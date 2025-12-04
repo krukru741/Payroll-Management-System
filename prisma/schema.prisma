@@ -1,10 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+model User {
+  id         String     @id @default(cuid())
+  name       String
+  email      String     @unique
+  username   String     @unique
+  password   String
+  role       UserRole   @default(EMPLOYEE)
+  avatarUrl  String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  employeeId String?    @unique
+  auditLogs  AuditLog[]
+  employee   Employee?  @relation(fields: [employeeId], references: [id])
+  
+  // Approval relations for Filing system
+  leaveReviews         LeaveRequest[]        @relation("LeaveReviewer")
+  overtimeReviews      OvertimeRequest[]     @relation("OvertimeReviewer")
+  cashAdvanceManagerReviews CashAdvanceRequest[] @relation("CashAdvanceManagerApprover")
+  cashAdvanceAdminReviews   CashAdvanceRequest[] @relation("CashAdvanceAdminApprover")
+}
+
+model Employee {
+  id              String         @id
+  firstName       String
+  lastName        String
+  middleName      String?
+  email           String         @unique
+  birthDate       DateTime
+  age             Int?
+  gender          Gender
+  civilStatus     CivilStatus
+  address         String
+  contactNo       String
+  avatarUrl       String?
+  department      Department
+  position        String
+  status          EmployeeStatus @default(ACTIVE)
+  dateHired       DateTime
+  dateResigned    DateTime?
+  basicSalary     Float
+  ratePerHour     Float?
+  ratePerDay      Float?
+  sssNo           String?
+  philHealthNo    String?
+  pagIbigNo       String?
+  tinNo           String?
+  ecFullName      String?
+  ecContactNo     String?
+  ecRelation      String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  biMonthlySalary Float?
+  workSchedule    String?
+  attendance      Attendance[]
+  documents       Document[]
+  loans           Loan[]
+  payrolls        Payroll[]
+  user            User?
+  
+  // Filing system relations
+  leaves        LeaveRequest[]
+  overtimes     OvertimeRequest[]
+  cashAdvances  CashAdvanceRequest[]
+}
+
+model Attendance {
+  id            String    @id @default(cuid())
+  date          DateTime
+  timeIn        DateTime?
+  timeOut       DateTime?
+  status        String
+  hoursWorked   Float     @default(0)
+  overtimeHours Float     @default(0)
+  employeeId    String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  employee      Employee  @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, date])
+}
+
+model Payroll {
+  id                  String    @id @default(cuid())
+  periodStart         DateTime
+  periodEnd           DateTime
+  payoutDate          DateTime?
+  basicPay            Float
+  overtimePay         Float
+  allowances          Float     @default(0)
+  grossPay            Float
+  sssDeduction        Float
+  philHealthDeduction Float
+  pagIbigDeduction    Float
+  taxDeduction        Float
+  otherDeductions     Float     @default(0)
+  totalDeductions     Float
+  netPay              Float
+  erSSS               Float
+  erPhilHealth        Float
+  erPagIbig           Float
+  status              String
+  employeeId          String
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  employee            Employee  @relation(fields: [employeeId], references: [id])
+}
+
+/// We could not retrieve columns for the underlying table. Either it has none or you are missing rights to see them. Please check your privileges.
+// model LeaveRequest {
+// }
+
+/// We could not retrieve columns for the underlying table. Either it has none or you are missing rights to see them. Please check your privileges.
+// model OvertimeRequest {
+// }
+
+/// We could not retrieve columns for the underlying table. Either it has none or you are missing rights to see them. Please check your privileges.
+// model CashAdvanceRequest {
+// }
+
+model Loan {
+  id           String   @id @default(cuid())
+  type         String
+  principal    Float
+  balance      Float
+  monthlyAmort Float
+  status       String
+  employeeId   String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  employee     Employee @relation(fields: [employeeId], references: [id])
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  name       String
+  type       String
+  url        String
+  size       Int
+  employeeId String
+  uploadedAt DateTime @default(now())
+  employee   Employee @relation(fields: [employeeId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  details   String?
+  ipAddress String?
+  userId    String?
+  timestamp DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
 }
 
 enum UserRole {
@@ -27,6 +180,7 @@ enum CivilStatus {
 }
 
 enum Department {
+  ADMIN
   ENGINEERING
   HR
   FINANCE
@@ -65,140 +219,6 @@ enum ApprovalStatus {
   REJECTED
 }
 
-
-model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  username      String    @unique
-  password      String    // Hashed
-  role          UserRole  @default(EMPLOYEE)
-  avatarUrl     String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // Relations
-  employee      Employee? @relation(fields: [employeeId], references: [id])
-  employeeId    String?   @unique
-  auditLogs     AuditLog[]
-  
-  // Approval relations
-  leaveReviews         LeaveRequest[]        @relation("LeaveReviewer")
-  overtimeReviews      OvertimeRequest[]     @relation("OvertimeReviewer")
-  cashAdvanceManagerReviews CashAdvanceRequest[] @relation("CashAdvanceManagerApprover")
-  cashAdvanceAdminReviews   CashAdvanceRequest[] @relation("CashAdvanceAdminApprover")
-}
-
-model Employee {
-  id            String    @id // Custom ID like EMP-001
-  firstName     String
-  lastName      String
-  middleName    String?
-  email         String    @unique
-  
-  // Profile
-  birthDate     DateTime
-  age           Int?
-  gender        Gender
-  civilStatus   CivilStatus
-  address       String
-  contactNo     String
-  avatarUrl     String?
-
-  // Employment
-  department    Department
-  position      String
-  status        EmployeeStatus @default(ACTIVE)
-  dateHired     DateTime
-  dateResigned  DateTime?
-  workSchedule  String?
-
-  // Compensation
-  basicSalary   Float
-  biMonthlySalary Float?
-  ratePerHour   Float?
-  ratePerDay    Float?
-
-  // Government IDs
-  sssNo         String?
-  philHealthNo  String?
-  pagIbigNo     String?
-  tinNo         String?
-
-  // Emergency Contact
-  ecFullName    String?
-  ecContactNo   String?
-  ecRelation    String?
-
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // Relations
-  user          User?
-  attendance    Attendance[]
-  payrolls      Payroll[]
-  leaves        LeaveRequest[]
-  overtimes     OvertimeRequest[]
-  cashAdvances  CashAdvanceRequest[]
-  loans         Loan[]
-  documents     Document[]
-}
-
-model Attendance {
-  id            String    @id @default(cuid())
-  date          DateTime
-  timeIn        DateTime?
-  timeOut       DateTime?
-  status        String    // PRESENT, LATE, ABSENT, HALF_DAY
-  hoursWorked   Float     @default(0)
-  overtimeHours Float     @default(0)
-  
-  employee      Employee  @relation(fields: [employeeId], references: [id])
-  employeeId    String
-
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  @@unique([employeeId, date])
-}
-
-model Payroll {
-  id            String    @id @default(cuid())
-  periodStart   DateTime
-  periodEnd     DateTime
-  payoutDate    DateTime?
-  
-  // Earnings
-  basicPay      Float
-  overtimePay   Float
-  allowances    Float     @default(0)
-  grossPay      Float
-
-  // Deductions
-  sssDeduction        Float
-  philHealthDeduction Float
-  pagIbigDeduction    Float
-  taxDeduction        Float
-  otherDeductions     Float     @default(0)
-  totalDeductions     Float
-
-  // Net
-  netPay        Float
-
-  // Employer Shares (Memo)
-  erSSS         Float
-  erPhilHealth  Float
-  erPagIbig     Float
-
-  status        String    // DRAFT, FINALIZED, PAID
-
-  employee      Employee  @relation(fields: [employeeId], references: [id])
-  employeeId    String
-
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
-
 model LeaveRequest {
   id            String    @id @default(cuid())
   employeeId    String
@@ -206,11 +226,17 @@ model LeaveRequest {
   
   leaveType     LeaveType
   startDate     DateTime
-  endDate       DateTime
-  totalDays     Float     // Can be 0.5 for half-day
+  endDate       DateTime?     // Auto-calculated when employee clocks in
+  totalDays     Float?        // Auto-calculated from start to end date
   reason        String
   
   status        RequestStatus @default(PENDING)
+  
+  // Auto-calculation fields
+  isActive      Boolean   @default(false)  // True when leave is approved and ongoing
+  completedAt   DateTime?                  // When leave was completed (clock-in or manual)
+  completedBy   String?                    // User ID who completed (for manual completion)
+  manualCompletion Boolean @default(false) // True if completed manually by manager/admin
   
   // Approval chain
   reviewedById  String?
@@ -227,6 +253,7 @@ model LeaveRequest {
   @@index([employeeId])
   @@index([status])
   @@index([startDate])
+  @@index([isActive])
 }
 
 model OvertimeRequest {
@@ -236,12 +263,19 @@ model OvertimeRequest {
   
   date          DateTime
   startTime     DateTime
-  endTime       DateTime
-  totalHours    Float
+  endTime       DateTime?  // Auto-calculated when employee clocks out
+  totalHours    Float?     // Auto-calculated from start to end time
   reason        String
-  projectTask   String?   // What they worked on
+  projectTask   String?    // What they worked on
   
   status        RequestStatus @default(PENDING)
+  
+  // Auto-calculation fields
+  isActive      Boolean   @default(false)  // True when OT is approved and ongoing
+  completedAt   DateTime?                  // When OT was completed (clock-out or manual)
+  completedBy   String?                    // User ID who completed (for manual completion)
+  manualCompletion Boolean @default(false) // True if completed manually by manager/admin
+  isBackdated   Boolean   @default(false)  // True if filed after clock-out
   
   // Approval chain
   reviewedById  String?
@@ -261,6 +295,7 @@ model OvertimeRequest {
   @@index([employeeId])
   @@index([status])
   @@index([date])
+  @@index([isActive])
 }
 
 model CashAdvanceRequest {
@@ -302,44 +337,4 @@ model CashAdvanceRequest {
   
   @@index([employeeId])
   @@index([status])
-}
-
-model Loan {
-  id            String    @id @default(cuid())
-  type          String    // SSS, PAGIBIG, COMPANY
-  principal     Float
-  balance       Float
-  monthlyAmort  Float
-  status        String    // ACTIVE, PAID
-
-  employee      Employee  @relation(fields: [employeeId], references: [id])
-  employeeId    String
-
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
-
-model Document {
-  id            String    @id @default(cuid())
-  name          String
-  type          String
-  url           String
-  size          Int
-
-  employee      Employee  @relation(fields: [employeeId], references: [id])
-  employeeId    String
-
-  uploadedAt    DateTime  @default(now())
-}
-
-model AuditLog {
-  id            String    @id @default(cuid())
-  action        String    // LOGIN, CREATE_EMPLOYEE, PROCESS_PAYROLL
-  details       String?
-  ipAddress     String?
-  
-  user          User?     @relation(fields: [userId], references: [id])
-  userId        String?
-
-  timestamp     DateTime  @default(now())
 }

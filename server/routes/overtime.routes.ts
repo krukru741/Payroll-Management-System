@@ -8,7 +8,8 @@ import {
   cancelOvertimeRequest,
   approveOvertimeRequest,
   rejectOvertimeRequest,
-  getOvertimeSummary
+  getOvertimeSummary,
+  completeOvertimeRequest
 } from '../controllers/overtime.controller';
 
 const router = express.Router();
@@ -26,6 +27,7 @@ router.delete('/:id', cancelOvertimeRequest);
 // Approval routes
 router.post('/:id/approve', approveOvertimeRequest);
 router.post('/:id/reject', rejectOvertimeRequest);
+router.post('/:id/complete', completeOvertimeRequest); // Complete overtime (auto or manual)
 
 // Overtime summary
 router.get('/summary/:employeeId', getOvertimeSummary);

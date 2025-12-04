@@ -1,34 +1,41 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
 
-// File a new leave request
+// File a new leave request (auto-calculation workflow)
 export const createLeaveRequest = async (req: Request, res: Response) => {
   try {
-    const { employeeId, leaveType, startDate, endDate, totalDays, reason, attachmentUrl } = req.body;
+    const { employeeId, leaveType, startDate, reason, attachmentUrl } = req.body;
 
-    // Validation
-    if (!employeeId || !leaveType || !startDate || !endDate || !totalDays || !reason) {
+    // Validation - only startDate required, endDate will be auto-calculated
+    if (!employeeId || !leaveType || !startDate || !reason) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Check if dates are valid
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (end < start) {
-      return res.status(400).json({ error: 'End date must be after start date' });
+    // Check if employee has any active approved leave
+    const activeLeave = await prisma.leaveRequest.findFirst({
+      where: {
+        employeeId,
+        status: 'APPROVED',
+        isActive: true
+      }
+    });
+
+    if (activeLeave) {
+      return res.status(400).json({ 
+        error: 'You already have an active leave. Please complete it before filing a new one.' 
+      });
     }
 
-    // Create leave request
+    // Create leave request (endDate and totalDays will be calculated on clock-in)
     const leaveRequest = await prisma.leaveRequest.create({
       data: {
         employeeId,
         leaveType,
-        startDate: start,
-        endDate: end,
-        totalDays,
+        startDate: new Date(startDate),
         reason,
         attachmentUrl,
-        status: 'PENDING'
+        status: 'PENDING',
+        isActive: false // Will be set to true when approved
       },
       include: {
         employee: {
@@ -223,7 +230,7 @@ export const cancelLeaveRequest = async (req: Request, res: Response) => {
   }
 };
 
-// Approve a leave request
+// Approve a leave request (activates auto-calculation)
 export const approveLeaveRequest = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -231,7 +238,8 @@ export const approveLeaveRequest = async (req: Request, res: Response) => {
     const reviewerId = (req as any).user?.userId; // From auth middleware
 
     const existing = await prisma.leaveRequest.findUnique({
-      where: { id }
+      where: { id },
+      include: { employee: true }
     });
 
     if (!existing) {
@@ -242,10 +250,27 @@ export const approveLeaveRequest = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Request is not pending' });
     }
 
+    // Check if employee has another active leave (business rule: only one active leave at a time)
+    const activeLeave = await prisma.leaveRequest.findFirst({
+      where: {
+        employeeId: existing.employeeId,
+        status: 'APPROVED',
+        isActive: true,
+        id: { not: id }
+      }
+    });
+
+    if (activeLeave) {
+      return res.status(400).json({ 
+        error: 'Employee already has an active leave. Cannot approve multiple leaves at once.' 
+      });
+    }
+
     const leaveRequest = await prisma.leaveRequest.update({
       where: { id },
       data: {
         status: 'APPROVED',
+        isActive: true, // Mark as active - will auto-complete on next clock-in
         reviewedById: reviewerId,
         reviewedAt: new Date(),
         reviewNotes
@@ -328,7 +353,11 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
       }
     });
 
-    const totalUsed = approvedLeaves.reduce((sum, leave) => sum + leave.totalDays, 0);
+    // Calculate total used (handle nullable totalDays for active leaves)
+    const totalUsed = approvedLeaves.reduce((sum, leave) => {
+      // Only count completed leaves (those with totalDays calculated)
+      return sum + (leave.totalDays || 0);
+    }, 0);
 
     // Assuming 15 days annual leave (configurable)
     const annualLeaveEntitlement = 15;
@@ -345,5 +374,51 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Get leave balance error:', error);
     res.status(500).json({ error: 'Failed to fetch leave balance' });
+  }
+};
+
+// Complete a leave request (called by attendance system on clock-in)
+export const completeLeaveRequest = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { endDate, completedBy, manualCompletion } = req.body;
+
+    const existing = await prisma.leaveRequest.findUnique({
+      where: { id }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Leave request not found' });
+    }
+
+    if (!existing.isActive) {
+      return res.status(400).json({ error: 'Leave is not active' });
+    }
+
+    // Calculate total days
+    const start = new Date(existing.startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    const leaveRequest = await prisma.leaveRequest.update({
+      where: { id },
+      data: {
+        endDate: end,
+        totalDays,
+        isActive: false,
+        completedAt: new Date(),
+        completedBy,
+        manualCompletion: manualCompletion || false
+      },
+      include: {
+        employee: true
+      }
+    });
+
+    res.json(leaveRequest);
+  } catch (error) {
+    console.error('Complete leave request error:', error);
+    res.status(500).json({ error: 'Failed to complete leave request' });
   }
 };

@@ -8,6 +8,7 @@ import Payroll from './pages/Payroll';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
 import Attendance from './pages/Attendance';
+import Filing from './pages/Filing';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
 import { canAccessRoute } from './utils/rbac';
@@ -41,6 +42,7 @@ const protectedRoutes = [
     { path: "/employees", component: <Employees /> },
     { path: "/payroll", component: <Payroll /> },
     { path: "/attendance", component: <Attendance /> },
+    { path: "/filing", component: <Filing /> },
     { path: "/reports", component: <Placeholder title="Reports" /> },
     { path: "/documents", component: <Placeholder title="Documents" /> },
     { path: "/settings", component: <Placeholder title="Settings" /> },

@@ -8,7 +8,8 @@ import {
   cancelLeaveRequest,
   approveLeaveRequest,
   rejectLeaveRequest,
-  getLeaveBalance
+  getLeaveBalance,
+  completeLeaveRequest
 } from '../controllers/leave.controller';
 
 const router = express.Router();
@@ -26,6 +27,7 @@ router.delete('/:id', cancelLeaveRequest);
 // Approval routes
 router.post('/:id/approve', approveLeaveRequest);
 router.post('/:id/reject', rejectLeaveRequest);
+router.post('/:id/complete', completeLeaveRequest); // Complete leave (auto or manual)
 
 // Leave balance
 router.get('/balance/:employeeId', getLeaveBalance);

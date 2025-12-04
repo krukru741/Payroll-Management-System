@@ -1,25 +1,40 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
 
-// File a new overtime request
+// File a new overtime request (auto-calculation workflow)
 export const createOvertimeRequest = async (req: Request, res: Response) => {
   try {
-    const { employeeId, date, startTime, endTime, totalHours, reason, projectTask } = req.body;
+    const { employeeId, date, startTime, reason, projectTask } = req.body;
 
-    // Validation
-    if (!employeeId || !date || !startTime || !endTime || !totalHours || !reason) {
+    // Validation - only startTime required, endTime will be auto-calculated
+    if (!employeeId || !date || !startTime || !reason) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Check if times are valid
+    const overtimeDate = new Date(date);
     const start = new Date(startTime);
-    const end = new Date(endTime);
-    if (end <= start) {
-      return res.status(400).json({ error: 'End time must be after start time' });
+    const now = new Date();
+
+    // Check if this is backdated (filed after the OT date)
+    const isBackdated = overtimeDate < new Date(now.setHours(0, 0, 0, 0));
+
+    // Check if employee has active overtime for this date
+    const activeOT = await prisma.overtimeRequest.findFirst({
+      where: {
+        employeeId,
+        date: overtimeDate,
+        status: 'APPROVED',
+        isActive: true
+      }
+    });
+
+    if (activeOT) {
+      return res.status(400).json({ 
+        error: 'You already have an active overtime request for this date.' 
+      });
     }
 
     // Calculate overtime rate based on date (weekday/weekend/holiday)
-    const overtimeDate = new Date(date);
     const dayOfWeek = overtimeDate.getDay();
     let overtimeRate = 1.25; // Default weekday rate
 
@@ -28,29 +43,18 @@ export const createOvertimeRequest = async (req: Request, res: Response) => {
     }
     // TODO: Add holiday check for 2.0x rate
 
-    // Get employee's hourly rate
-    const employee = await prisma.employee.findUnique({
-      where: { id: employeeId },
-      select: { ratePerHour: true }
-    });
-
-    const overtimePay = employee?.ratePerHour 
-      ? totalHours * employee.ratePerHour * overtimeRate 
-      : null;
-
-    // Create overtime request
+    // Create overtime request (endTime and totalHours will be calculated on clock-out)
     const overtimeRequest = await prisma.overtimeRequest.create({
       data: {
         employeeId,
         date: overtimeDate,
         startTime: start,
-        endTime: end,
-        totalHours,
         reason,
         projectTask,
         overtimeRate,
-        overtimePay,
-        status: 'PENDING'
+        status: 'PENDING',
+        isActive: false, // Will be set to true when approved
+        isBackdated
       },
       include: {
         employee: {
@@ -245,7 +249,7 @@ export const cancelOvertimeRequest = async (req: Request, res: Response) => {
   }
 };
 
-// Approve an overtime request
+// Approve an overtime request (activates auto-calculation)
 export const approveOvertimeRequest = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -253,7 +257,8 @@ export const approveOvertimeRequest = async (req: Request, res: Response) => {
     const reviewerId = (req as any).user?.userId;
 
     const existing = await prisma.overtimeRequest.findUnique({
-      where: { id }
+      where: { id },
+      include: { employee: true }
     });
 
     if (!existing) {
@@ -264,10 +269,28 @@ export const approveOvertimeRequest = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Request is not pending' });
     }
 
+    // Check if employee has another active OT for the same date
+    const activeOT = await prisma.overtimeRequest.findFirst({
+      where: {
+        employeeId: existing.employeeId,
+        date: existing.date,
+        status: 'APPROVED',
+        isActive: true,
+        id: { not: id }
+      }
+    });
+
+    if (activeOT) {
+      return res.status(400).json({ 
+        error: 'Employee already has an active overtime for this date.' 
+      });
+    }
+
     const overtimeRequest = await prisma.overtimeRequest.update({
       where: { id },
       data: {
         status: 'APPROVED',
+        isActive: true, // Mark as active - will auto-complete on clock-out
         reviewedById: reviewerId,
         reviewedAt: new Date(),
         reviewNotes
@@ -352,7 +375,8 @@ export const getOvertimeSummary = async (req: Request, res: Response) => {
       }
     });
 
-    const totalHours = approvedOvertimes.reduce((sum, ot) => sum + ot.totalHours, 0);
+    // Handle nullable totalHours for active overtimes
+    const totalHours = approvedOvertimes.reduce((sum, ot) => sum + (ot.totalHours || 0), 0);
     const totalPay = approvedOvertimes.reduce((sum, ot) => sum + (ot.overtimePay || 0), 0);
     const paidOvertimes = approvedOvertimes.filter(ot => ot.isPaid);
     const unpaidOvertimes = approvedOvertimes.filter(ot => !ot.isPaid);
@@ -373,5 +397,64 @@ export const getOvertimeSummary = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Get overtime summary error:', error);
     res.status(500).json({ error: 'Failed to fetch overtime summary' });
+  }
+};
+
+// Complete an overtime request (called by attendance system on clock-out)
+export const completeOvertimeRequest = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { endTime, completedBy, manualCompletion } = req.body;
+
+    const existing = await prisma.overtimeRequest.findUnique({
+      where: { id },
+      include: {
+        employee: {
+          select: {
+            ratePerHour: true
+          }
+        }
+      }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Overtime request not found' });
+    }
+
+    if (!existing.isActive) {
+      return res.status(400).json({ error: 'Overtime is not active' });
+    }
+
+    // Calculate total hours
+    const start = new Date(existing.startTime);
+    const end = new Date(endTime);
+    const diffMs = end.getTime() - start.getTime();
+    const totalHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100; // Round to 2 decimals
+
+    // Calculate overtime pay
+    const overtimePay = existing.employee.ratePerHour
+      ? totalHours * existing.employee.ratePerHour * (existing.overtimeRate || 1.25)
+      : null;
+
+    const overtimeRequest = await prisma.overtimeRequest.update({
+      where: { id },
+      data: {
+        endTime: end,
+        totalHours,
+        overtimePay,
+        isActive: false,
+        completedAt: new Date(),
+        completedBy,
+        manualCompletion: manualCompletion || false
+      },
+      include: {
+        employee: true
+      }
+    });
+
+    res.json(overtimeRequest);
+  } catch (error) {
+    console.error('Complete overtime request error:', error);
+    res.status(500).json({ error: 'Failed to complete overtime request' });
   }
 };
