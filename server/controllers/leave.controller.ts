@@ -4,7 +4,8 @@ import prisma from '../db';
 // File a new leave request (auto-calculation workflow)
 export const createLeaveRequest = async (req: Request, res: Response) => {
   try {
-    const { employeeId, leaveType, startDate, reason, attachmentUrl } = req.body;
+    const { employeeId, leaveType, startDate, reason } = req.body;
+    const file = (req as any).file; // Multer adds file to request
 
     // Validation - only startDate required, endDate will be auto-calculated
     if (!employeeId || !leaveType || !startDate || !reason) {
@@ -25,6 +26,9 @@ export const createLeaveRequest = async (req: Request, res: Response) => {
         error: 'You already have an active leave. Please complete it before filing a new one.' 
       });
     }
+
+    // Generate attachment URL if file was uploaded
+    const attachmentUrl = file ? `/uploads/leave-attachments/${file.filename}` : null;
 
     // Create leave request (endDate and totalDays will be calculated on clock-in)
     const leaveRequest = await prisma.leaveRequest.create({

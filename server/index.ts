@@ -10,6 +10,12 @@ import leaveRoutes from './routes/leave.routes';
 import overtimeRoutes from './routes/overtime.routes';
 import cashAdvanceRoutes from './routes/cashadvance.routes';
 import leaveCreditRoutes from './routes/leavecredit.routes';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -23,6 +29,9 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);

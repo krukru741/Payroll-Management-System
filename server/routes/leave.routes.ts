@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { upload } from '../middleware/upload.middleware';
 import {
   createLeaveRequest,
   getLeaveRequests,
@@ -18,7 +19,7 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // Leave request routes
-router.post('/request', createLeaveRequest);
+router.post('/request', upload.single('attachment'), createLeaveRequest);
 router.get('/', getLeaveRequests);
 router.get('/:id', getLeaveRequest);
 router.put('/:id', updateLeaveRequest);

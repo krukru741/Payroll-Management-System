@@ -1,6 +1,7 @@
 import React from 'react';
 import Modal from '../components/Modal';
 import Button from '../components/Button';
+import { FileText } from 'lucide-react';
 
 // Type definition (matches Filing.tsx)
 interface LeaveRequest {
@@ -19,6 +20,7 @@ interface LeaveRequest {
   reason: string;
   status: string;
   reviewNotes?: string;
+  attachmentUrl?: string;
   createdAt: string;
 }
 
@@ -119,6 +121,20 @@ const ViewLeaveModal: React.FC<ViewLeaveModalProps> = ({
               <span className="text-gray-500 block mb-1">Reason:</span>
               <p className="text-gray-900">{leave.reason}</p>
             </div>
+            {leave.attachmentUrl && (
+              <div className="pt-2 border-t">
+                <span className="text-gray-500 block mb-1">Attachment:</span>
+                <a
+                  href={`http://localhost:3000${leave.attachmentUrl}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-600 hover:text-primary-700 text-sm flex items-center gap-1"
+                >
+                  <FileText size={16} />
+                  View Document
+                </a>
+              </div>
+            )}
             <div className="flex justify-between text-xs text-gray-500">
               <span>Filed on:</span>
               <span>{new Date(leave.createdAt).toLocaleString()}</span>

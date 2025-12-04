@@ -131,6 +131,7 @@ const Filing: React.FC = () => {
     startDate: '',
     reason: ''
   });
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
   // Overtime form state (simplified - no endTime/totalHours)
   const [overtimeForm, setOvertimeForm] = useState({
@@ -258,12 +259,19 @@ const Filing: React.FC = () => {
         throw new Error('Employee ID not found');
       }
 
-      const response = await api.post('/leaves/request', {
-        employeeId: user.employeeId,
-        leaveType: leaveForm.leaveType,
-        startDate: leaveForm.startDate,
-        reason: leaveForm.reason
-        // endDate and totalDays removed - will be auto-calculated on clock-in
+      // Use FormData for file upload
+      const formData = new FormData();
+      formData.append('employeeId', user.employeeId);
+      formData.append('leaveType', leaveForm.leaveType);
+      formData.append('startDate', leaveForm.startDate);
+      formData.append('reason', leaveForm.reason);
+      
+      if (attachmentFile) {
+        formData.append('attachment', attachmentFile);
+      }
+
+      const response = await api.post('/leaves/request', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       setLeaveRequests([response.data, ...leaveRequests]);
@@ -273,6 +281,7 @@ const Filing: React.FC = () => {
         startDate: '',
         reason: ''
       });
+      setAttachmentFile(null);
       alert('Leave request submitted successfully!');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to submit leave request');
@@ -907,6 +916,31 @@ const Filing: React.FC = () => {
                   placeholder="Please provide a reason for your leave request..."
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Attachment (Optional)
+                  {leaveForm.leaveType === 'SICK_LEAVE' && (
+                    <span className="text-xs text-gray-500 ml-2">
+                      (Medical certificate recommended for 3+ days)
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                />
+                {attachmentFile && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    Selected: {attachmentFile.name} ({(attachmentFile.size / 1024).toFixed(1)} KB)
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Accepted formats: JPG, PNG, PDF (Max 5MB)
+                </p>
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t">
