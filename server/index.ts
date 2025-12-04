@@ -7,6 +7,8 @@ import employeeRoutes from './routes/employee.routes';
 import payrollRoutes from './routes/payroll.routes';
 import attendanceRoutes from './routes/attendance.routes';
 import leaveRoutes from './routes/leave.routes';
+import overtimeRoutes from './routes/overtime.routes';
+import cashAdvanceRoutes from './routes/cashadvance.routes';
 
 dotenv.config();
 
@@ -27,6 +29,8 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leaves', leaveRoutes);
+app.use('/api/overtime', overtimeRoutes);
+app.use('/api/cash-advance', cashAdvanceRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

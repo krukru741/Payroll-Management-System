@@ -41,6 +41,31 @@ enum EmployeeStatus {
   TERMINATED
 }
 
+enum LeaveType {
+  VACATION
+  SICK_LEAVE
+  EMERGENCY_LEAVE
+  MATERNITY_LEAVE
+  PATERNITY_LEAVE
+  BEREAVEMENT_LEAVE
+  UNPAID_LEAVE
+  OTHER
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+
 model User {
   id            String    @id @default(cuid())
   name          String
@@ -56,6 +81,12 @@ model User {
   employee      Employee? @relation(fields: [employeeId], references: [id])
   employeeId    String?   @unique
   auditLogs     AuditLog[]
+  
+  // Approval relations
+  leaveReviews         LeaveRequest[]        @relation("LeaveReviewer")
+  overtimeReviews      OvertimeRequest[]     @relation("OvertimeReviewer")
+  cashAdvanceManagerReviews CashAdvanceRequest[] @relation("CashAdvanceManagerApprover")
+  cashAdvanceAdminReviews   CashAdvanceRequest[] @relation("CashAdvanceAdminApprover")
 }
 
 model Employee {
@@ -107,6 +138,8 @@ model Employee {
   attendance    Attendance[]
   payrolls      Payroll[]
   leaves        LeaveRequest[]
+  overtimes     OvertimeRequest[]
+  cashAdvances  CashAdvanceRequest[]
   loans         Loan[]
   documents     Document[]
 }
@@ -168,20 +201,107 @@ model Payroll {
 
 model LeaveRequest {
   id            String    @id @default(cuid())
-  type          String    // VACATION, SICK, EMERGENCY
+  employeeId    String
+  employee      Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  leaveType     LeaveType
   startDate     DateTime
   endDate       DateTime
+  totalDays     Float     // Can be 0.5 for half-day
   reason        String
-  status        String    @default("PENDING") // PENDING, APPROVED, REJECTED
   
-  employee      Employee  @relation(fields: [employeeId], references: [id])
-  employeeId    String
-
-  approvedBy    String?
-  rejectionReason String?
-
+  status        RequestStatus @default(PENDING)
+  
+  // Approval chain
+  reviewedById  String?
+  reviewedBy    User?     @relation("LeaveReviewer", fields: [reviewedById], references: [id])
+  reviewedAt    DateTime?
+  reviewNotes   String?
+  
+  // Attachments (e.g., medical certificate)
+  attachmentUrl String?
+  
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  
+  @@index([employeeId])
+  @@index([status])
+  @@index([startDate])
+}
+
+model OvertimeRequest {
+  id            String    @id @default(cuid())
+  employeeId    String
+  employee      Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  date          DateTime
+  startTime     DateTime
+  endTime       DateTime
+  totalHours    Float
+  reason        String
+  projectTask   String?   // What they worked on
+  
+  status        RequestStatus @default(PENDING)
+  
+  // Approval chain
+  reviewedById  String?
+  reviewedBy    User?     @relation("OvertimeReviewer", fields: [reviewedById], references: [id])
+  reviewedAt    DateTime?
+  reviewNotes   String?
+  
+  // Payroll integration
+  overtimeRate  Float?    // Multiplier (e.g., 1.5x, 2.0x)
+  overtimePay   Float?    // Calculated amount
+  isPaid        Boolean   @default(false)
+  paidInPayrollId String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([employeeId])
+  @@index([status])
+  @@index([date])
+}
+
+model CashAdvanceRequest {
+  id            String    @id @default(cuid())
+  employeeId    String
+  employee      Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  amount        Float
+  reason        String
+  repaymentPlan String    // e.g., "3 months", "Next payroll"
+  
+  status        RequestStatus @default(PENDING)
+  
+  // Approval chain (may require multiple approvals)
+  managerApproval      ApprovalStatus @default(PENDING)
+  managerApprovedById  String?
+  managerApprovedBy    User?     @relation("CashAdvanceManagerApprover", fields: [managerApprovedById], references: [id])
+  managerApprovedAt    DateTime?
+  managerNotes         String?
+  
+  adminApproval        ApprovalStatus @default(PENDING)
+  adminApprovedById    String?
+  adminApprovedBy      User?     @relation("CashAdvanceAdminApprover", fields: [adminApprovedById], references: [id])
+  adminApprovedAt      DateTime?
+  adminNotes           String?
+  
+  // Disbursement
+  isDisbursed   Boolean   @default(false)
+  disbursedAt   DateTime?
+  disbursedBy   String?
+  
+  // Repayment tracking
+  isFullyRepaid Boolean   @default(false)
+  repaidAmount  Float     @default(0)
+  remainingBalance Float
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([employeeId])
+  @@index([status])
 }
 
 model Loan {
