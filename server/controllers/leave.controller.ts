@@ -353,22 +353,74 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
       }
     });
 
-    // Calculate total used (handle nullable totalDays for active leaves)
-    const totalUsed = approvedLeaves.reduce((sum, leave) => {
-      // Only count completed leaves (those with totalDays calculated)
-      return sum + (leave.totalDays || 0);
-    }, 0);
+    // Leave entitlements per type (configurable - could be moved to database)
+    const defaultEntitlements: Record<string, number> = {
+      VACATION: 15,
+      SICK_LEAVE: 10,
+      EMERGENCY_LEAVE: 3,
+      MATERNITY_LEAVE: 60,
+      PATERNITY_LEAVE: 7,
+      BEREAVEMENT_LEAVE: 3,
+      UNPAID_LEAVE: 999, // Unlimited
+      OTHER: 5
+    };
 
-    // Assuming 15 days annual leave (configurable)
-    const annualLeaveEntitlement = 15;
-    const remaining = annualLeaveEntitlement - totalUsed;
+    // Get custom leave credits if any
+    const customCredits = await prisma.leaveCredit.findMany({
+      where: { employeeId }
+    });
+
+    // Build entitlements map (custom overrides default)
+    const leaveEntitlements: Record<string, number> = { ...defaultEntitlements };
+    customCredits.forEach(credit => {
+      leaveEntitlements[credit.leaveType] = credit.credits;
+    });
+
+    // Calculate used days per leave type
+    const usedByType: Record<string, number> = {};
+    approvedLeaves.forEach(leave => {
+      const leaveType = leave.leaveType;
+      if (!usedByType[leaveType]) {
+        usedByType[leaveType] = 0;
+      }
+      // Only count completed leaves (those with totalDays calculated)
+      usedByType[leaveType] += leave.totalDays || 0;
+    });
+
+    // Build detailed balance per leave type
+    const leaveBalances: Record<string, any> = {};
+    Object.keys(leaveEntitlements).forEach(leaveType => {
+      const entitlement = leaveEntitlements[leaveType];
+      const used = usedByType[leaveType] || 0;
+      const remaining = leaveType === 'UNPAID_LEAVE' ? 999 : Math.max(0, entitlement - used);
+      
+      leaveBalances[leaveType] = {
+        entitlement,
+        used,
+        remaining
+      };
+    });
+
+    // Calculate totals (excluding UNPAID_LEAVE)
+    const totalEntitlement = Object.keys(leaveEntitlements)
+      .filter(type => type !== 'UNPAID_LEAVE')
+      .reduce((sum, type) => sum + leaveEntitlements[type], 0);
+    
+    const totalUsed = Object.keys(usedByType)
+      .filter(type => type !== 'UNPAID_LEAVE')
+      .reduce((sum, type) => sum + usedByType[type], 0);
+    
+    const totalRemaining = Math.max(0, totalEntitlement - totalUsed);
 
     res.json({
       employeeId,
       year: currentYear,
-      entitlement: annualLeaveEntitlement,
-      used: totalUsed,
-      remaining: Math.max(0, remaining),
+      leaveBalances,
+      totals: {
+        entitlement: totalEntitlement,
+        used: totalUsed,
+        remaining: totalRemaining
+      },
       leaveHistory: approvedLeaves
     });
   } catch (error) {

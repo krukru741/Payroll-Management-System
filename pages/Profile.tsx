@@ -3,7 +3,7 @@ import Card from '../components/Card';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import api from '../lib/axios';
-import { User, Briefcase, FileText, Heart, MapPin, Phone, Mail, Calendar, Clock } from 'lucide-react';
+import { User, Briefcase, FileText, Heart, MapPin, Phone, Mail, Calendar, Clock, Award } from 'lucide-react';
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
@@ -11,6 +11,8 @@ const Profile: React.FC = () => {
   const [activeTab, setActiveTab] = useState('personal');
   const [todayAttendance, setTodayAttendance] = useState<any>(null);
   const [loadingAttendance, setLoadingAttendance] = useState(true);
+  const [leaveBalance, setLeaveBalance] = useState<any>(null);
+  const [loadingBalance, setLoadingBalance] = useState(true);
 
   // Fetch today's attendance - MUST be before any conditional returns
   useEffect(() => {
@@ -46,6 +48,29 @@ const Profile: React.FC = () => {
 
     fetchTodayAttendance();
   }, [user?.employeeId]);
+
+  // Fetch leave balance
+  useEffect(() => {
+    const fetchLeaveBalance = async () => {
+      if (!user?.employeeId) {
+        setLoadingBalance(false);
+        return;
+      }
+
+      try {
+        setLoadingBalance(true);
+        const response = await api.get(`/leaves/balance/${user.employeeId}`);
+        setLeaveBalance(response.data);
+      } catch (error) {
+        console.error('Failed to fetch leave balance:', error);
+      } finally {
+        setLoadingBalance(false);
+      }
+    };
+
+    fetchLeaveBalance();
+  }, [user?.employeeId]);
+
 
   if (!user || !user.employeeId) {
     return (
@@ -202,6 +227,49 @@ const Profile: React.FC = () => {
       </div>
 
       <div className="lg:col-span-1 space-y-4">
+          <Card title="Leave Credits">
+            {loadingBalance ? (
+              <div className="text-center text-sm text-gray-500 py-4">Loading...</div>
+            ) : leaveBalance ? (
+              <div className="space-y-3">
+                {/* Top 4 leave types including unpaid */}
+                {['VACATION', 'SICK_LEAVE', 'EMERGENCY_LEAVE', 'UNPAID_LEAVE'].map(leaveType => {
+                  const balance = leaveBalance.leaveBalances[leaveType];
+                  const label = leaveType.replace('_', ' ');
+                  const isUnpaid = leaveType === 'UNPAID_LEAVE';
+                  return (
+                    <div key={leaveType} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Award size={14} className={isUnpaid ? "text-gray-400" : "text-blue-600"} />
+                        <span className="text-xs font-medium text-gray-700">{label}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-bold text-gray-900">
+                          {isUnpaid ? '∞' : (balance?.remaining || 0)}
+                        </span>
+                        {!isUnpaid && (
+                          <span className="text-xs text-gray-500"> / {balance?.entitlement || 0} days</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="pt-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-700 uppercase">Total Remaining</span>
+                    <span className="text-sm font-bold text-primary-600">
+                      {leaveBalance.totals?.remaining || 0} days
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-sm text-gray-500 py-4">
+                No leave balance data
+              </div>
+            )}
+          </Card>
+
           <Card title="Work Schedule">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-primary-50 rounded-lg text-primary-600">

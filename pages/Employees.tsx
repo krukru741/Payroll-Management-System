@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import EmployeeFormModal from '../components/EmployeeFormModal';
+import LeaveCreditsModal from '../components/LeaveCreditsModal';
 import { Employee, EmployeeStatus } from '../types';
-import { Plus, Search, Filter, Edit, Trash2, Lock } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Trash2, Lock, Award } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { getScope, hasPermission } from '../utils/rbac';
@@ -14,6 +15,8 @@ const Employees: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const [selectedEmployeeForCredits, setSelectedEmployeeForCredits] = useState<Employee | null>(null);
 
   // RBAC Filtering
   const scope = user ? getScope(user.role, 'employees', 'read') : 'none';
@@ -84,6 +87,17 @@ const Employees: React.FC = () => {
       addEmployee(newEmployee);
     }
   };
+
+  const handleManageCredits = (employee: Employee) => {
+    setSelectedEmployeeForCredits(employee);
+    setShowCreditsModal(true);
+  };
+
+  const handleCloseCreditsModal = () => {
+    setShowCreditsModal(false);
+    setSelectedEmployeeForCredits(null);
+  };
+
 
   const currentEmployee = editingId 
     ? employees.find(e => e.id === editingId) || null
@@ -185,6 +199,16 @@ const Employees: React.FC = () => {
                         </button>
                       )}
                       
+                      {user?.role === 'ADMIN' && (
+                        <button
+                          onClick={() => handleManageCredits(emp)}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="Manage Leave Credits"
+                        >
+                          <Award size={16} />
+                        </button>
+                      )}
+                      
                       {canDelete && (
                         <button
                           onClick={() => handleDelete(emp.id)}
@@ -227,6 +251,15 @@ const Employees: React.FC = () => {
         onSubmit={handleSubmit}
         initialData={currentEmployee}
       />
+
+      {selectedEmployeeForCredits && (
+        <LeaveCreditsModal
+          isOpen={showCreditsModal}
+          onClose={handleCloseCreditsModal}
+          employeeId={selectedEmployeeForCredits.id}
+          employeeName={`${selectedEmployeeForCredits.firstName} ${selectedEmployeeForCredits.lastName}`}
+        />
+      )}
     </div>
   );
 };

@@ -70,6 +70,27 @@ model Employee {
   leaves        LeaveRequest[]
   overtimes     OvertimeRequest[]
   cashAdvances  CashAdvanceRequest[]
+  leaveCredits  LeaveCredit[]
+}
+
+model LeaveCredit {
+  id            String    @id @default(cuid())
+  employeeId    String
+  employee      Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  leaveType     LeaveType
+  credits       Float     // Total credits for this leave type
+  
+  // Audit trail
+  adjustedBy    String?   // User ID who made the adjustment
+  adjustedAt    DateTime  @default(now())
+  reason        String?   // Reason for adjustment
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@unique([employeeId, leaveType])
+  @@index([employeeId])
 }
 
 model Attendance {

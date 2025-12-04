@@ -147,6 +147,10 @@ const Filing: React.FC = () => {
     repaymentPlan: 'Next Payroll'
   });
   
+  // Leave balance state
+  const [leaveBalance, setLeaveBalance] = useState<any>(null);
+  const [loadingBalance, setLoadingBalance] = useState(false);
+  
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [error, setError] = useState<string>('');
@@ -526,6 +530,27 @@ const Filing: React.FC = () => {
     }
   }, [leaveForm.startDate, leaveForm.endDate]);
 
+  // Fetch leave balance
+  const fetchLeaveBalance = async () => {
+    if (!user?.employeeId) return;
+    
+    try {
+      setLoadingBalance(true);
+      const response = await api.get(`/leaves/balance/${user.employeeId}`);
+      setLeaveBalance(response.data);
+    } catch (error) {
+      console.error('Failed to fetch leave balance:', error);
+    } finally {
+      setLoadingBalance(false);
+    }
+  };
+
+  // Handle opening leave modal
+  const handleOpenLeaveModal = () => {
+    setShowLeaveModal(true);
+    fetchLeaveBalance();
+  };
+
   // Update overtime form when times change
   useEffect(() => {
     if (overtimeForm.startTime && overtimeForm.endTime) {
@@ -543,7 +568,7 @@ const Filing: React.FC = () => {
           <p className="text-gray-500 text-xs">Manage leave, overtime, and cash advance requests</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => setShowLeaveModal(true)} className="flex items-center gap-2">
+          <Button size="sm" onClick={handleOpenLeaveModal} className="flex items-center gap-2">
             <Calendar size={14} /> <span className="hidden sm:inline">File Leave</span>
           </Button>
           <Button size="sm" onClick={() => setShowOvertimeModal(true)} className="flex items-center gap-2">
@@ -800,6 +825,37 @@ const Filing: React.FC = () => {
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
                 {error}
+              </div>
+            )}
+
+            {/* Leave Balance Display */}
+            {loadingBalance ? (
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg text-center text-sm text-gray-500">
+                Loading balance...
+              </div>
+            ) : leaveBalance && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="font-semibold text-blue-900 mb-3 text-sm">Your Leave Balance</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-blue-700 block text-xs">Available ({leaveForm.leaveType.replace('_', ' ')}):</span>
+                    <span className="font-bold text-lg text-blue-900">
+                      {leaveBalance.leaveBalances[leaveForm.leaveType]?.remaining || 0} days
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700 block text-xs">Used this year:</span>
+                    <span className="font-bold text-lg text-gray-700">
+                      {leaveBalance.leaveBalances[leaveForm.leaveType]?.used || 0} days
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-blue-300">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-blue-700">Total Entitlement:</span>
+                    <span className="font-semibold">{leaveBalance.leaveBalances[leaveForm.leaveType]?.entitlement || 0} days</span>
+                  </div>
+                </div>
               </div>
             )}
 
