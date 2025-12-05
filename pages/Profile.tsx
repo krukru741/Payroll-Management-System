@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
+import AvatarUpload from '../components/AvatarUpload';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import api from '../lib/axios';
@@ -7,7 +8,7 @@ import { User, Briefcase, FileText, Heart, MapPin, Phone, Mail, Calendar, Clock,
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
-  const { getEmployeeById } = useData();
+  const { getEmployeeById, refreshEmployees } = useData();
   const [activeTab, setActiveTab] = useState('personal');
   const [todayAttendance, setTodayAttendance] = useState<any>(null);
   const [loadingAttendance, setLoadingAttendance] = useState(true);
@@ -119,11 +120,15 @@ const Profile: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="h-20 bg-gradient-to-r from-primary-700 to-primary-500"></div>
           <div className="px-4 -mt-10 flex items-end gap-3">
-            <img
-              src={employee.avatarUrl}
-              alt="Profile"
-              className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md bg-white"
-            />
+            <div className="border-4 border-white rounded-full shadow-md">
+              <AvatarUpload 
+                employeeId={employee.id}
+                currentAvatarUrl={employee.avatarUrl}
+                onUploadSuccess={refreshEmployees}
+                size="md"
+                autoUpload={false}
+              />
+            </div>
             <div className="pb-1">
               <h1 className="text-xl font-bold text-gray-900">{employee.firstName} {employee.lastName}</h1>
               <p className="text-xs text-gray-500">{employee.position}</p>

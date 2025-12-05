@@ -95,17 +95,105 @@ const AnnouncementItem: React.FC<{ item: typeof ANNOUNCEMENTS[0] }> = ({ item })
 
 const AdminDashboard: React.FC = () => {
   const { employees } = useData();
+  const { user } = useAuth();
   const [adminStats, setAdminStats] = useState({
     pendingRequests: 0,
     payrollHistory: [],
     attendanceRate: 0
   });
+  const [attendanceStatus, setAttendanceStatus] = useState<'in' | 'out'>('out');
+  const [loadingAttendance, setLoadingAttendance] = useState(true);
+  const [todayRecord, setTodayRecord] = useState<any>(null);
 
   useEffect(() => {
     api.get('/analytics/admin-dashboard')
       .then(res => setAdminStats(res.data))
       .catch(err => console.error('Failed to fetch admin stats', err));
-  }, []);
+
+    // Fetch attendance status for admin/manager
+    if (user?.employeeId) {
+      const fetchStatus = async () => {
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const response = await api.get('/attendance', {
+            params: {
+              employeeId: user.employeeId,
+              startDate: today,
+              endDate: today
+            }
+          });
+          
+          if (response.data.length > 0) {
+            const record = response.data[0];
+            setTodayRecord(record);
+            if (record.timeIn && !record.timeOut) {
+              setAttendanceStatus('in');
+            } else {
+              setAttendanceStatus('out');
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch attendance status', error);
+        } finally {
+          setLoadingAttendance(false);
+        }
+      };
+      
+      fetchStatus();
+    } else {
+      setLoadingAttendance(false);
+    }
+  }, [user?.employeeId]);
+
+  const handleClockIn = async () => {
+    if (!user?.employeeId) {
+      alert('Your account is not linked to an employee record.');
+      return;
+    }
+    setLoadingAttendance(true);
+    try {
+      await api.post('/attendance/clock-in', {
+        employeeId: user.employeeId,
+        timestamp: new Date().toISOString()
+      });
+      setAttendanceStatus('in');
+      const today = new Date().toISOString().split('T')[0];
+      const response = await api.get('/attendance', {
+        params: { employeeId: user.employeeId, startDate: today, endDate: today }
+      });
+      if (response.data.length > 0) setTodayRecord(response.data[0]);
+    } catch (error) {
+      console.error('Failed to clock in', error);
+      alert('Failed to clock in');
+    } finally {
+      setLoadingAttendance(false);
+    }
+  };
+
+  const handleClockOut = async () => {
+    if (!user?.employeeId) {
+      alert('Your account is not linked to an employee record.');
+      return;
+    }
+    setLoadingAttendance(true);
+    try {
+      await api.post('/attendance/clock-out', {
+        employeeId: user.employeeId,
+        timestamp: new Date().toISOString()
+      });
+      setAttendanceStatus('out');
+      const today = new Date().toISOString().split('T')[0];
+      const response = await api.get('/attendance', {
+        params: { employeeId: user.employeeId, startDate: today, endDate: today }
+      });
+      if (response.data.length > 0) setTodayRecord(response.data[0]);
+    } catch (error) {
+      console.error('Failed to clock out', error);
+      alert('Failed to clock out');
+    } finally {
+      setLoadingAttendance(false);
+    }
+  };
 
   const stats = useMemo(() => {
     const totalEmployees = employees.length;
@@ -129,6 +217,54 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {/* Time Tracker Section - Same design as Employee Dashboard */}
+      {user?.employeeId && (
+        <div className="bg-gradient-to-r from-primary-800 to-primary-600 rounded-lg p-6 text-white shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="relative z-10">
+            <h2 className="text-2xl font-bold mb-1">Admin Dashboard</h2>
+            <p className="text-primary-100 max-w-xl">
+              Track your attendance and manage the system
+            </p>
+          </div>
+          
+          {/* Clock In/Out Card */}
+          <div className="relative z-10 bg-white/10 backdrop-blur-md p-4 rounded-lg border border-white/20 w-full md:w-auto min-w-[200px]">
+            <p className="text-primary-100 text-xs font-medium uppercase tracking-wide mb-2">Time Tracker</p>
+            <div className="text-3xl font-bold mb-1 font-mono">
+              {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <p className="text-xs text-primary-100 mb-3">
+              {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+            
+            {attendanceStatus === 'out' && (!todayRecord || !todayRecord.timeOut) ? (
+              <button 
+                onClick={handleClockIn}
+                disabled={loadingAttendance}
+                className="w-full py-2 bg-green-500 hover:bg-green-600 text-white rounded-md font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              >
+                <LogIn size={16} /> Clock In
+              </button>
+            ) : attendanceStatus === 'in' ? (
+              <button 
+                onClick={handleClockOut}
+                disabled={loadingAttendance}
+                className="w-full py-2 bg-red-500 hover:bg-red-600 text-white rounded-md font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              >
+                <LogOut size={16} /> Clock Out
+              </button>
+            ) : (
+              <div className="w-full py-2 bg-gray-500/50 text-white rounded-md font-semibold text-sm flex items-center justify-center gap-2 cursor-not-allowed">
+                <CheckCircle size={16} /> Completed
+              </div>
+            )}
+          </div>
+
+          {/* Decorative Circle */}
+          <div className="absolute -right-10 -bottom-20 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard 

@@ -11,6 +11,7 @@ import overtimeRoutes from './routes/overtime.routes';
 import cashAdvanceRoutes from './routes/cashadvance.routes';
 import leaveCreditRoutes from './routes/leavecredit.routes';
 import analyticsRoutes from './routes/analytics.routes';
+import userRoutes from './routes/user.routes';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -44,6 +45,7 @@ app.use('/api/overtime', overtimeRoutes);
 app.use('/api/cash-advance', cashAdvanceRoutes);
 app.use('/api/leave-credits', leaveCreditRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/users', userRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

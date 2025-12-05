@@ -37,6 +37,7 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Module, { [key in Action]?: S
     payroll: { create: 'all', read: 'all', update: 'all', delete: 'all', process: 'all' },
     leave_requests: { read: 'team', approve: 'team' },
     settings: { read: 'all' },
+    users: { read: 'all', update: 'team' },
     reports: { read: 'team' },
     analytics: { read: 'team' },
     documents: { read: 'team' }
@@ -106,4 +107,29 @@ export const canAccessRoute = (role: UserRole, path: string): boolean => {
     // Allow access if there are any permissions defined for the role on this module.
     // The component itself will handle the fine-grained action/scope checks.
     return !!modulePermissions && Object.keys(modulePermissions).length > 0;
+};
+
+// Helper function to validate role changes
+export const canChangeRole = (
+  currentUserRole: UserRole,
+  targetCurrentRole: UserRole,
+  newRole: UserRole
+): boolean => {
+  // Only ADMIN can assign ADMIN role
+  if (newRole === UserRole.ADMIN && currentUserRole !== UserRole.ADMIN) {
+    return false;
+  }
+
+  // ADMIN can change any role
+  if (currentUserRole === UserRole.ADMIN) {
+    return true;
+  }
+
+  // MANAGER can assign MANAGER and EMPLOYEE roles
+  if (currentUserRole === UserRole.MANAGER) {
+    return newRole === UserRole.MANAGER || newRole === UserRole.EMPLOYEE;
+  }
+
+  // EMPLOYEE cannot change roles
+  return false;
 };

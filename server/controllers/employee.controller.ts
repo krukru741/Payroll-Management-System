@@ -217,3 +217,50 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch dashboard stats' });
   }
 };
+
+export const uploadAvatar = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Get employee to check if they have an existing avatar
+    const employee = await prisma.employee.findUnique({
+      where: { id },
+      select: { avatarUrl: true }
+    });
+
+    if (!employee) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+
+    // Delete old avatar file if it exists
+    if (employee.avatarUrl) {
+      const oldFilePath = employee.avatarUrl.replace('/uploads/', '');
+      const fs = await import('fs');
+      const path = await import('path');
+      const { fileURLToPath } = await import('url');
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const fullPath = path.join(__dirname, '../../uploads', oldFilePath);
+      
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+      }
+    }
+
+    // Update employee with new avatar URL
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    const updatedEmployee = await prisma.employee.update({
+      where: { id },
+      data: { avatarUrl }
+    });
+
+    res.json({ avatarUrl: updatedEmployee.avatarUrl });
+  } catch (error) {
+    console.error('Upload avatar error:', error);
+    res.status(500).json({ error: 'Failed to upload avatar' });
+  }
+};

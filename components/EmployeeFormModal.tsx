@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import Modal from "./Modal";
 import Button from "./Button";
+import AvatarUpload from "./AvatarUpload";
 import {
   Department,
   EmployeeStatus,
@@ -164,29 +165,23 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
     >
       <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
         {/* Profile Photo Section */}
-        <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-          <div className="relative">
-            <img
-              src={currentAvatar}
-              alt="Profile"
-              className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-md"
+        {initialData && (
+          <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+            <AvatarUpload 
+              employeeId={initialData.id}
+              currentAvatarUrl={initialData.avatarUrl}
+              size="sm"
             />
-            <button
-              type="button"
-              className="absolute bottom-0 right-0 bg-white rounded-full p-1.5 shadow-sm border border-gray-200 text-gray-500 hover:text-primary-600 transition-colors"
-            >
-              <Camera size={12} />
-            </button>
+            <div>
+              <h4 className="font-semibold text-gray-900 text-sm">
+                Profile Photo
+              </h4>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Upload a professional photo (JPG, PNG, GIF). Max 5MB.
+              </p>
+            </div>
           </div>
-          <div>
-            <h4 className="font-semibold text-gray-900 text-sm">
-              Profile Photo
-            </h4>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Upload a professional photo (JPG, PNG). Max 2MB.
-            </p>
-          </div>
-        </div>
+        )}
 
         {/* Personal Info Group */}
         <div>
