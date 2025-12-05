@@ -53,3 +53,43 @@ export const upload = multer({
 
 // Export upload directory path for serving files
 export const UPLOAD_DIR = uploadDir;
+
+// Avatar upload configuration
+const avatarUploadDir = path.join(__dirname, '../../uploads/avatars');
+if (!fs.existsSync(avatarUploadDir)) {
+  fs.mkdirSync(avatarUploadDir, { recursive: true });
+}
+
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, avatarUploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+    cb(null, `avatar-${uniqueSuffix}${path.extname(file.originalname)}`);
+  }
+});
+
+const avatarFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+  const allowedExts = /jpeg|jpg|png|gif/;
+  
+  const extname = allowedExts.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedMimes.includes(file.mimetype);
+  
+  if (mimetype && extname) {
+    return cb(null, true);
+  } else {
+    cb(new Error('Only image files (jpg, png, gif) are allowed!'));
+  }
+};
+
+export const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max
+  },
+  fileFilter: avatarFileFilter
+});
+
+export const AVATAR_UPLOAD_DIR = avatarUploadDir;
