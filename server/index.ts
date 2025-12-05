@@ -12,6 +12,8 @@ import cashAdvanceRoutes from './routes/cashadvance.routes';
 import leaveCreditRoutes from './routes/leavecredit.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import userRoutes from './routes/user.routes';
+import settingsRoutes from './routes/settings.routes';
+import payrollDataRoutes from './routes/payrollData.routes';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -46,6 +48,8 @@ app.use('/api/cash-advance', cashAdvanceRoutes);
 app.use('/api/leave-credits', leaveCreditRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/payroll-data', payrollDataRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

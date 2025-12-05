@@ -1,31 +1,55 @@
 import { Employee } from '../types';
 
-export const calculateSSS = (monthlySalary: number) => {
-  // 2024 SSS Contribution Schedule (Republic Act No. 11199)
-  // Max Monthly Salary Credit (MSC): 30,000
-  // Min Monthly Salary Credit (MSC): 5,000
-  // Employee Rate: 4.5%
-  // Employer Rate: 9.5%
-  // EC Contribution: 10 (MSC < 14,750) or 30 (MSC >= 14,750)
+// Settings interface
+export interface PayrollSettings {
+  taxRates?: {
+    bracket1: number;
+    bracket2: number;
+    bracket3: number;
+    bracket4: number;
+    bracket5: number;
+    bracket6: number;
+  };
+  sssRate?: {
+    employee: number;
+    employer: number;
+    ec: number;
+  };
+  philHealthRate?: {
+    employee: number;
+    employer: number;
+  };
+  pagIbigRate?: {
+    employee: number;
+    employer: number;
+  };
+  lateDeduction?: {
+    perMinute: number;
+    perHour: number;
+    enabled: boolean;
+  };
+}
 
+export const calculateSSS = (monthlySalary: number, settings?: PayrollSettings) => {
   const MIN_MSC = 5000;
   const MAX_MSC = 30000;
   const EC_THRESHOLD = 14750;
   const EC_LOW = 10;
   const EC_HIGH = 30;
 
-  // Determine applicable MSC
   let msc = monthlySalary;
   if (monthlySalary < MIN_MSC) {
     msc = MIN_MSC;
   } else if (monthlySalary > MAX_MSC) {
     msc = MAX_MSC;
   }
-  // Note: In real tables, MSC is often rounded or bracketed. 
-  // For formula-based calculation, using the exact capped salary is standard for HRIS.
 
-  const employeeShare = msc * 0.045;
-  const employerRegularShare = msc * 0.095;
+  // Use settings rates or defaults
+  const employeeRate = (settings?.sssRate?.employee || 4.5) / 100;
+  const employerRate = (settings?.sssRate?.employer || 9.5) / 100;
+
+  const employeeShare = msc * employeeRate;
+  const employerRegularShare = msc * employerRate;
   const ecContribution = msc < EC_THRESHOLD ? EC_LOW : EC_HIGH;
 
   return {
@@ -38,38 +62,17 @@ export const calculateSSS = (monthlySalary: number) => {
   };
 };
 
-export const calculatePhilHealth = (monthlySalary: number) => {
-  // 2024 PhilHealth Rate: 5% Total
-  // Floor: 10,000 | Ceiling: 100,000
-  // Share: 50% Employee, 50% Employer (2.5% each)
+export const calculatePhilHealth = (monthlySalary: number, settings?: PayrollSettings) => {
   const MIN_SALARY = 10000;
   const MAX_SALARY = 100000;
-  const TOTAL_RATE = 0.05;
 
   let applicableSalary = monthlySalary;
   if (monthlySalary < MIN_SALARY) applicableSalary = MIN_SALARY;
   if (monthlySalary > MAX_SALARY) applicableSalary = MAX_SALARY;
 
-  const totalContribution = applicableSalary * TOTAL_RATE;
-  const share = totalContribution / 2;
-
-  return {
-    employee: share,
-    employer: share
-  };
-};
-
-export const calculatePagIBIG = (monthlySalary: number) => {
-  // 2024 Pag-IBIG Rate
-  // Max Fund Salary: 10,000
-  // Employee Rate: 1% (if salary <= 1,500) else 2%
-  // Employer Rate: 2%
-  const MAX_FUND_SALARY = 10000;
-  
-  const applicableSalary = Math.min(monthlySalary, MAX_FUND_SALARY);
-  
-  const employeeRate = monthlySalary <= 1500 ? 0.01 : 0.02;
-  const employerRate = 0.02;
+  // Use settings rates or defaults (2% each)
+  const employeeRate = (settings?.philHealthRate?.employee || 2.0) / 100;
+  const employerRate = (settings?.philHealthRate?.employer || 2.0) / 100;
 
   return {
     employee: applicableSalary * employeeRate,
@@ -77,21 +80,45 @@ export const calculatePagIBIG = (monthlySalary: number) => {
   };
 };
 
-export const calculateWithholdingTax = (taxableIncome: number): number => {
-  // Simplified TRAIN Law / 2023-2024 Annual Tax Table converted to Monthly
+export const calculatePagIBIG = (monthlySalary: number, settings?: PayrollSettings) => {
+  const MAX_FUND_SALARY = 10000;
   
+  const applicableSalary = Math.min(monthlySalary, MAX_FUND_SALARY);
+  
+  // Use settings rates or defaults
+  const employeeRate = (settings?.pagIbigRate?.employee || 2.0) / 100;
+  const employerRate = (settings?.pagIbigRate?.employer || 2.0) / 100;
+
+  return {
+    employee: applicableSalary * employeeRate,
+    employer: applicableSalary * employerRate
+  };
+};
+
+export const calculateWithholdingTax = (taxableIncome: number, settings?: PayrollSettings): number => {
+  // Use settings tax rates or defaults
+  const rates = settings?.taxRates || {
+    bracket1: 0,
+    bracket2: 15,
+    bracket3: 20,
+    bracket4: 25,
+    bracket5: 30,
+    bracket6: 35
+  };
+
+  // Monthly brackets (annual / 12)
   if (taxableIncome <= 20833) {
     return 0;
   } else if (taxableIncome <= 33332) {
-    return (taxableIncome - 20833) * 0.15;
+    return (taxableIncome - 20833) * (rates.bracket2 / 100);
   } else if (taxableIncome <= 66666) {
-    return 1875 + (taxableIncome - 33333) * 0.20;
+    return 1875 + (taxableIncome - 33333) * (rates.bracket3 / 100);
   } else if (taxableIncome <= 166666) {
-    return 8541.80 + (taxableIncome - 66667) * 0.25;
+    return 8541.80 + (taxableIncome - 66667) * (rates.bracket4 / 100);
   } else if (taxableIncome <= 666666) {
-    return 33541.80 + (taxableIncome - 166667) * 0.30;
+    return 33541.80 + (taxableIncome - 166667) * (rates.bracket5 / 100);
   } else {
-    return 183541.80 + (taxableIncome - 666667) * 0.35;
+    return 183541.80 + (taxableIncome - 666667) * (rates.bracket6 / 100);
   }
 };
 
@@ -107,6 +134,7 @@ export interface PayrollResult {
     philHealth: number;
     pagIbig: number;
     tax: number;
+    late: number;
     total: number;
   };
   netPay: number;
@@ -118,19 +146,31 @@ export interface PayrollResult {
   };
 }
 
-export const processPayrollForEmployee = (employee: Employee, overtimePay: number = 0): PayrollResult => {
+export const processPayrollForEmployee = (
+  employee: Employee, 
+  overtimePay: number = 0,
+  lateMinutes: number = 0,
+  settings?: PayrollSettings
+): PayrollResult => {
   // Assuming Semi-Monthly Payroll (Dividing monthly rates by 2)
   const semiMonthlyBasic = employee.basicSalary / 2;
   const grossPay = semiMonthlyBasic + overtimePay;
 
-  const sssData = calculateSSS(employee.basicSalary);
-  const phData = calculatePhilHealth(employee.basicSalary);
-  const pagIbigData = calculatePagIBIG(employee.basicSalary);
+  // Calculate late deductions
+  let lateDeduction = 0;
+  if (settings?.lateDeduction?.enabled && lateMinutes > 0) {
+    const perMinute = settings.lateDeduction.perMinute || 0;
+    lateDeduction = lateMinutes * perMinute;
+  }
+
+  const sssData = calculateSSS(employee.basicSalary, settings);
+  const phData = calculatePhilHealth(employee.basicSalary, settings);
+  const pagIbigData = calculatePagIBIG(employee.basicSalary, settings);
   
   // Taxable Income Calculation (Monthly Basis)
   // Taxable = Basic - (Total SSS + Total PH + Total PagIBIG)
   const monthlyTaxable = employee.basicSalary - (sssData.employee + phData.employee + pagIbigData.employee);
-  const monthlyTax = calculateWithholdingTax(monthlyTaxable);
+  const monthlyTax = calculateWithholdingTax(monthlyTaxable, settings);
 
   // Split deductions for semi-monthly period
   const deductions = {
@@ -138,7 +178,8 @@ export const processPayrollForEmployee = (employee: Employee, overtimePay: numbe
     philHealth: phData.employee / 2,
     pagIbig: pagIbigData.employee / 2,
     tax: monthlyTax / 2,
-    total: (sssData.employee + phData.employee + pagIbigData.employee + monthlyTax) / 2
+    late: lateDeduction,
+    total: (sssData.employee + phData.employee + pagIbigData.employee + monthlyTax) / 2 + lateDeduction
   };
 
   const netPay = grossPay - deductions.total;

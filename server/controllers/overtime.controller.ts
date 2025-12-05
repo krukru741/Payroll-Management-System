@@ -4,9 +4,9 @@ import prisma from '../db';
 // File a new overtime request (auto-calculation workflow)
 export const createOvertimeRequest = async (req: Request, res: Response) => {
   try {
-    const { employeeId, date, startTime, reason, projectTask } = req.body;
+    const { employeeId, date, startTime, endTime, reason, projectTask } = req.body;
 
-    // Validation - only startTime required, endTime will be auto-calculated
+    // Validation - only startTime required, endTime is optional
     if (!employeeId || !date || !startTime || !reason) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -43,12 +43,47 @@ export const createOvertimeRequest = async (req: Request, res: Response) => {
     }
     // TODO: Add holiday check for 2.0x rate
 
-    // Create overtime request (endTime and totalHours will be calculated on clock-out)
+    // Calculate hours and pay if endTime is provided
+    let totalHours: number | undefined;
+    let overtimePay: number | undefined;
+    let end: Date | undefined;
+
+    if (endTime) {
+      end = new Date(endTime);
+      
+      // Calculate time difference in milliseconds
+      let diffMs = end.getTime() - start.getTime();
+      
+      // Handle cross-midnight scenario (end time is next day)
+      if (diffMs < 0) {
+        // Add 24 hours (86400000 ms) to account for next day
+        diffMs += 24 * 60 * 60 * 1000;
+      }
+      
+      // Convert to hours
+      totalHours = diffMs / (1000 * 60 * 60);
+      
+      // Get employee's basic salary to calculate pay
+      const employee = await prisma.employee.findUnique({
+        where: { id: employeeId },
+        select: { basicSalary: true }
+      });
+
+      if (employee) {
+        const hourlyRate = employee.basicSalary / 160; // Monthly salary / 160 hours
+        overtimePay = hourlyRate * totalHours * overtimeRate;
+      }
+    }
+
+    // Create overtime request
     const overtimeRequest = await prisma.overtimeRequest.create({
       data: {
         employeeId,
         date: overtimeDate,
         startTime: start,
+        endTime: end,
+        totalHours,
+        overtimePay,
         reason,
         projectTask,
         overtimeRate,

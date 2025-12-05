@@ -16,7 +16,8 @@ import {
   BadgePercent,
   ChevronRight,
   Eye,
-  Lock
+  Lock,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -27,17 +28,46 @@ import api from '../lib/axios';
 const Payroll: React.FC = () => {
   const { user } = useAuth();
   const { employees, loading } = useData();
-  const [selectedPayslip, setSelectedPayslip] = useState<{ emp: Employee, data: PayrollResult } | null>(null);
+  const [selectedPayslip, setSelectedPayslip] = useState<{ emp: Employee, data: PayrollResult, daysAbsent?: number, absenceDeduction?: number, cashAdvance?: number } | null>(null);
   const [missingLogs, setMissingLogs] = useState<any[]>([]);
   const [loadingMissingLogs, setLoadingMissingLogs] = useState(true);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
+  const [attendanceData, setAttendanceData] = useState<any[]>([]);
+  const [cashAdvanceData, setCashAdvanceData] = useState<any[]>([]);
 
-  // Hardcoded period for demo (In a real app, this comes from a Period Selector)
-  const currentPeriod = {
-    start: '2024-05-01',
-    end: '2024-05-15'
-  };
+  // Period selector state
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  const [selectedPeriod, setSelectedPeriod] = useState<'first' | 'second'>('first');
+  const [useCustomDates, setUseCustomDates] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+
+  // Calculate current period based on selection
+  const currentPeriod = useMemo(() => {
+    if (useCustomDates && customStartDate && customEndDate) {
+      return {
+        start: customStartDate,
+        end: customEndDate
+      };
+    }
+
+    const [year, month] = selectedMonth.split('-').map(Number);
+    
+    if (selectedPeriod === 'first') {
+      return {
+        start: `${selectedMonth}-01`,
+        end: `${selectedMonth}-15`
+      };
+    } else {
+      // Second period: 16th to end of month
+      const lastDay = new Date(year, month, 0).getDate();
+      return {
+        start: `${selectedMonth}-16`,
+        end: `${selectedMonth}-${lastDay.toString().padStart(2, '0')}`
+      };
+    }
+  }, [selectedMonth, selectedPeriod, useCustomDates, customStartDate, customEndDate]);
 
   useEffect(() => {
     const fetchMissingLogs = async () => {
@@ -53,17 +83,124 @@ const Payroll: React.FC = () => {
     fetchMissingLogs();
   }, []);
 
+  // Fetch attendance and cash advance data for the selected period
+  useEffect(() => {
+    const fetchPayrollData = async () => {
+      try {
+        const [attendanceRes, cashAdvanceRes] = await Promise.all([
+          api.get('/payroll-data/attendance-summary', {
+            params: {
+              periodStart: currentPeriod.start,
+              periodEnd: currentPeriod.end
+            }
+          }),
+          api.get('/payroll-data/cash-advances', {
+            params: {
+              periodStart: currentPeriod.start,
+              periodEnd: currentPeriod.end
+            }
+          })
+        ]);
+        setAttendanceData(attendanceRes.data);
+        setCashAdvanceData(cashAdvanceRes.data);
+      } catch (error) {
+        console.error('Failed to fetch payroll data', error);
+      }
+    };
+    fetchPayrollData();
+  }, [currentPeriod.start, currentPeriod.end]);
+
+  // Manual refresh function
+  const handleRefreshData = async () => {
+    try {
+      const [attendanceRes, cashAdvanceRes] = await Promise.all([
+        api.get('/payroll-data/attendance-summary', {
+          params: {
+            periodStart: currentPeriod.start,
+            periodEnd: currentPeriod.end
+          }
+        }),
+        api.get('/payroll-data/cash-advances', {
+          params: {
+            periodStart: currentPeriod.start,
+            periodEnd: currentPeriod.end
+          }
+        })
+      ]);
+      setAttendanceData(attendanceRes.data);
+      setCashAdvanceData(cashAdvanceRes.data);
+      alert('Payroll data refreshed successfully!');
+    } catch (error) {
+      console.error('Failed to refresh payroll data', error);
+      alert('Failed to refresh payroll data');
+    }
+  };
+
   // Memoize payroll calculations
   const payrollData = useMemo(() => {
+    // Determine if this is the first or second period of the month
+    // First period: 1st-15th, Second period: 16th-End
+    const periodStartDate = new Date(currentPeriod.start);
+    const dayOfMonth = periodStartDate.getDate();
+    const isFirstPeriod = dayOfMonth <= 15;
+
     return employees.map(emp => {
-      // Simulate random OT for demo variety
-      const otPay = Math.floor(Math.random() * 3000); 
+      // Get employee's attendance data
+      const attendance = attendanceData.find(a => a.employeeId === emp.id) || {
+        daysAbsent: 0,
+        totalOvertimeHours: 0,
+        totalLateMinutes: 0
+      };
+
+      // Calculate absence deduction (daily rate × absent days)
+      // Daily rate = monthly salary / 2 / number of working days in period (typically 10-11 days)
+      const dailyRate = (emp.basicSalary / 2) / 11; // Assuming ~11 working days per semi-month
+      const absenceDeduction = dailyRate * attendance.daysAbsent;
+
+      // Calculate REAL overtime pay from attendance data
+      // Hourly rate = monthly salary / 160 hours (standard work hours per month)
+      const hourlyRate = emp.basicSalary / 160;
+      const otMultiplier = 1.25; // 125% for regular overtime (can be fetched from settings)
+      const otPay = hourlyRate * attendance.totalOvertimeHours * otMultiplier;
+      
+      // Calculate late deduction manually (since settings not integrated yet)
+      const lateDeduction = (hourlyRate / 60) * attendance.totalLateMinutes;
+      
+      // Get cash advance for this employee (backend returns 'totalCashAdvance')
+      const cashAdvance = cashAdvanceData.find(ca => ca.employeeId === emp.id)?.totalCashAdvance || 0;
+      
+      const payrollResult = processPayrollForEmployee(emp, otPay, attendance.totalLateMinutes);
+      
+      // Philippine payroll practice: Government deductions only on 2nd period (16th-End)
+      if (isFirstPeriod) {
+        // Zero out government deductions for first period
+        payrollResult.deductions.sss = 0;
+        payrollResult.deductions.philHealth = 0;
+        payrollResult.deductions.pagIbig = 0;
+        payrollResult.deductions.tax = 0;
+        // Set late deduction
+        payrollResult.deductions.late = lateDeduction;
+        // Recalculate total deductions without government contributions
+        payrollResult.deductions.total = lateDeduction;
+        payrollResult.netPay = payrollResult.grossPay - lateDeduction;
+      } else {
+        // Second period: keep government deductions, just add late deduction
+        payrollResult.deductions.late = lateDeduction;
+        payrollResult.deductions.total += lateDeduction;
+        payrollResult.netPay -= lateDeduction;
+      }
+      
       return {
         emp,
-        ...processPayrollForEmployee(emp, otPay)
+        ...payrollResult,
+        daysAbsent: attendance.daysAbsent,
+        absenceDeduction: absenceDeduction,
+        overtimeHours: attendance.totalOvertimeHours,
+        lateMinutes: attendance.totalLateMinutes,
+        cashAdvance: cashAdvance
       };
     });
-  }, [employees]);
+  }, [employees, attendanceData, cashAdvanceData, currentPeriod.start]);
 
   // RBAC Filtering
   const scope = user ? getScope(user.role, 'payroll', 'read') : 'none';
@@ -114,12 +251,100 @@ const Payroll: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {/* Period Selector */}
+      <Card title="Payroll Period">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="useCustomDates"
+              checked={useCustomDates}
+              onChange={(e) => setUseCustomDates(e.target.checked)}
+              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            <label htmlFor="useCustomDates" className="text-sm text-gray-700">
+              Use custom date range
+            </label>
+          </div>
+
+          {useCustomDates ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Month</label>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Period</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedPeriod('first')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      selectedPeriod === 'first'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    1st - 15th
+                  </button>
+                  <button
+                    onClick={() => setSelectedPeriod('second')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      selectedPeriod === 'second'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    16th - End
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-primary-50 border border-primary-200 rounded-lg p-3">
+            <p className="text-xs text-primary-800">
+              <span className="font-semibold">Selected Period:</span> {currentPeriod.start} to {currentPeriod.end}
+            </p>
+          </div>
+        </div>
+      </Card>
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Payroll Processing</h2>
           <p className="text-gray-500 text-xs">Period: {currentPeriod.start} to {currentPeriod.end}</p>
         </div>
         <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleRefreshData}>
+                <RefreshCw size={14} className="mr-2" />
+                Refresh Data
+            </Button>
             <Button variant="outline" size="sm" onClick={handleExport} disabled={filteredPayrollData.length === 0}>
                 <Download size={14} className="mr-2" />
                 Export Report
@@ -144,7 +369,7 @@ const Payroll: React.FC = () => {
             <p className="text-primary-200 text-xs font-medium uppercase tracking-wide">Total Net Pay</p>
             <h3 className="text-2xl font-bold mt-1">₱{totals.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             <div className="mt-2 flex items-center text-[10px] text-primary-200 bg-primary-800/50 inline-block px-2 py-0.5 rounded">
-                <Calendar size={10} className="mr-1" /> Payment Date: May 15, 2024
+                <Calendar size={10} className="mr-1" /> Payment Date: {currentPeriod.end}
             </div>
         </div>
 
@@ -180,7 +405,7 @@ const Payroll: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {filteredPayrollData.map(({ emp, grossPay, deductions, netPay, employerContributions }) => (
+                            {filteredPayrollData.map(({ emp, grossPay, deductions, netPay, employerContributions, daysAbsent, absenceDeduction, cashAdvance }) => (
                                 <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="py-2 px-3">
                                         <div className="font-medium text-sm text-gray-900">{emp.lastName}, {emp.firstName}</div>
@@ -196,7 +421,7 @@ const Payroll: React.FC = () => {
                                     </td>
                                     <td className="py-2 px-3 text-right">
                                         <button 
-                                          onClick={() => setSelectedPayslip({ emp, data: { employeeId: emp.id, grossPay, deductions, netPay, employerContributions } })}
+                                          onClick={() => setSelectedPayslip({ emp, data: { employeeId: emp.id, grossPay, deductions, netPay, employerContributions }, daysAbsent, absenceDeduction, cashAdvance })}
                                           className="text-gray-400 hover:text-primary-600 transition-colors p-1"
                                           title="View Payslip"
                                         >

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Settings as SettingsIcon, Users, User, Shield } from 'lucide-react';
 import UserManagementTab from '../components/UserManagementTab';
+import SystemSettingsTab from '../components/SystemSettingsTab';
 import { hasPermission } from '../utils/rbac';
 
 const Settings: React.FC = () => {
@@ -70,10 +71,7 @@ const Settings: React.FC = () => {
         )}
 
         {activeTab === 'system' && user?.role === 'ADMIN' && (
-          <div className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">System Settings</h2>
-            <p className="text-gray-600">System settings coming soon...</p>
-          </div>
+          <SystemSettingsTab />
         )}
       </div>
     </div>

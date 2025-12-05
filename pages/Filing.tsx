@@ -96,6 +96,8 @@ interface CashAdvanceRequest {
     id: string;
     name: string;
   };
+  isDisbursed: boolean;
+  disbursedAt?: string;
   remainingBalance: number;
   createdAt: string;
 }
@@ -379,6 +381,24 @@ const Filing: React.FC = () => {
     setSelectedCashAdvance(cashAdvance);
     setReviewNotes('');
     setShowViewCashAdvanceModal(true);
+  };
+
+  // Permission check for approvals and disbursements
+  const canApprove = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+
+  // Disburse cash advance handler
+  const handleDisburseCashAdvance = async (requestId: string) => {
+    if (!confirm('Are you sure you want to mark this cash advance as disbursed?')) {
+      return;
+    }
+
+    try {
+      await api.post(`/cash-advance/${requestId}/disburse`);
+      alert('Cash advance marked as disbursed successfully!');
+      fetchAllRequests();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to disburse cash advance');
+    }
   };
 
   // Approval/Rejection handlers
@@ -789,6 +809,7 @@ const Filing: React.FC = () => {
                   <th className="py-2 px-3 text-[10px] font-semibold text-gray-500 uppercase">Repayment Plan</th>
                   <th className="py-2 px-3 text-[10px] font-semibold text-gray-500 uppercase text-center">Manager</th>
                   <th className="py-2 px-3 text-[10px] font-semibold text-gray-500 uppercase text-center">Admin</th>
+                  <th className="py-2 px-3 text-[10px] font-semibold text-gray-500 uppercase text-center">Disbursed</th>
                   <th className="py-2 px-3 text-[10px] font-semibold text-gray-500 uppercase text-center">Status</th>
                   <th className="py-2 px-3 text-[10px] font-semibold text-gray-500 uppercase text-center">Actions</th>
                 </tr>
@@ -796,11 +817,11 @@ const Filing: React.FC = () => {
               <tbody className="divide-y divide-gray-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="py-4 text-center text-xs text-gray-500">Loading...</td>
+                    <td colSpan={8} className="py-4 text-center text-xs text-gray-500">Loading...</td>
                   </tr>
                 ) : filteredCashAdvanceRequests.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-4 text-center text-xs text-gray-500">No cash advance requests found</td>
+                    <td colSpan={8} className="py-4 text-center text-xs text-gray-500">No cash advance requests found</td>
                   </tr>
                 ) : (
                   filteredCashAdvanceRequests.map((request) => (
@@ -812,9 +833,34 @@ const Filing: React.FC = () => {
                       <td className="py-2 px-3 text-xs text-gray-600">{request.repaymentPlan}</td>
                       <td className="py-2 px-3 text-center">{getStatusBadge(request.managerApproval)}</td>
                       <td className="py-2 px-3 text-center">{getStatusBadge(request.adminApproval)}</td>
+                      <td className="py-2 px-3 text-center">
+                        {request.isDisbursed ? (
+                          <div className="text-xs">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-800">
+                              ✓ Disbursed
+                            </span>
+                            {request.disbursedAt && (
+                              <div className="text-[9px] text-gray-500 mt-0.5">
+                                {new Date(request.disbursedAt).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">
+                            Pending
+                          </span>
+                        )}
+                      </td>
                       <td className="py-2 px-3 text-center">{getStatusBadge(request.status)}</td>
                       <td className="py-2 px-3 text-center">
-                        <Button size="sm" variant="ghost" onClick={() => handleViewCashAdvance(request)}>View</Button>
+                        <div className="flex gap-1 justify-center">
+                          <Button size="sm" variant="ghost" onClick={() => handleViewCashAdvance(request)}>View</Button>
+                          {!request.isDisbursed && request.managerApproval === 'APPROVED' && request.adminApproval === 'APPROVED' && canApprove && (
+                            <Button size="sm" variant="primary" onClick={() => handleDisburseCashAdvance(request.id)}>
+                              Disburse
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
