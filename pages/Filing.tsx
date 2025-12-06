@@ -135,10 +135,9 @@ const Filing: React.FC = () => {
   });
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
-  // Overtime form state (simplified - no endTime/totalHours)
+  // Overtime form state (simplified - no startTime/endTime/totalHours)
   const [overtimeForm, setOvertimeForm] = useState({
     date: '',
-    startTime: '',
     reason: '',
     projectTask: ''
   });
@@ -303,15 +302,12 @@ const Filing: React.FC = () => {
         throw new Error('Employee ID not found');
       }
 
-      // Combine date with start time to create full DateTime string
-      const startDateTime = `${overtimeForm.date}T${overtimeForm.startTime}:00`;
-
       const response = await api.post('/overtime/request', {
         employeeId: user.employeeId,
         date: overtimeForm.date,
-        startTime: startDateTime,
         reason: overtimeForm.reason,
         projectTask: overtimeForm.projectTask || null
+        // startTime removed - will be auto-calculated from work schedule end time
         // endTime and totalHours removed - will be auto-calculated on clock-out
       });
 
@@ -319,7 +315,6 @@ const Filing: React.FC = () => {
       setShowOvertimeModal(false);
       setOvertimeForm({
         date: '',
-        startTime: '',
         reason: '',
         projectTask: ''
       });
@@ -784,7 +779,7 @@ const Filing: React.FC = () => {
                       <td className="py-2 px-3 text-xs text-gray-600">{new Date(request.date).toLocaleDateString()}</td>
                       <td className="py-2 px-3 text-xs font-mono text-gray-600">
                         {new Date(request.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
-                        {new Date(request.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {request.endTime ? new Date(request.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending'}
                       </td>
                       <td className="py-2 px-3 text-center text-xs font-mono">{request.totalHours}</td>
                       <td className="py-2 px-3 text-center text-xs font-mono">{request.overtimeRate}x</td>
@@ -1020,34 +1015,22 @@ const Filing: React.FC = () => {
             )}
 
             <form onSubmit={handleOvertimeSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                  <input
-                    type="date"
-                    value={overtimeForm.date}
-                    onChange={(e) => setOvertimeForm({ ...overtimeForm, date: e.target.value })}
-                    max={new Date().toISOString().split('T')[0]}
-                    className="w-full border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
-                  <input
-                    type="time"
-                    value={overtimeForm.startTime}
-                    onChange={(e) => setOvertimeForm({ ...overtimeForm, startTime: e.target.value })}
-                    className="w-full border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
-                    required
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={overtimeForm.date}
+                  onChange={(e) => setOvertimeForm({ ...overtimeForm, date: e.target.value })}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="w-full border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
+                  required
+                />
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-xs text-blue-800">
-                  <strong>ℹ️ Auto-Calculation:</strong> Your overtime will automatically end when you clock out. 
-                  Hours and pay will be calculated at that time.
+                  <strong>ℹ️ Auto-Start:</strong> Your overtime will automatically start at your work schedule end time. 
+                  It will end when you clock out, and hours/pay will be calculated automatically.
                 </p>
               </div>
 

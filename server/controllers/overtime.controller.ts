@@ -4,15 +4,14 @@ import prisma from '../db';
 // File a new overtime request (auto-calculation workflow)
 export const createOvertimeRequest = async (req: Request, res: Response) => {
   try {
-    const { employeeId, date, startTime, endTime, reason, projectTask } = req.body;
+    const { employeeId, date, endTime, reason, projectTask } = req.body;
 
-    // Validation - only startTime required, endTime is optional
-    if (!employeeId || !date || !startTime || !reason) {
+    // Validation - startTime is now optional, will be auto-calculated from work schedule
+    if (!employeeId || !date || !reason) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     const overtimeDate = new Date(date);
-    const start = new Date(startTime);
     const now = new Date();
 
     // Check if this is backdated (filed after the OT date)
@@ -33,6 +32,21 @@ export const createOvertimeRequest = async (req: Request, res: Response) => {
         error: 'You already have an active overtime request for this date.' 
       });
     }
+
+    // Get system settings to determine work schedule end time
+    const systemSettings = await prisma.systemSettings.findFirst();
+    
+    // Parse settings JSON and extract workEnd
+    const settings = systemSettings?.settings as any;
+    const workEnd = settings?.workEnd || '16:30';
+    
+    // Default work end time is 4:30 PM (16:30)
+    const workEndHour = parseInt(workEnd.split(':')[0]);
+    const workEndMinute = parseInt(workEnd.split(':')[1]);
+
+    // Create start time based on work schedule end time
+    const start = new Date(overtimeDate);
+    start.setHours(workEndHour, workEndMinute, 0, 0);
 
     // Calculate overtime rate based on date (weekday/weekend/holiday)
     const dayOfWeek = overtimeDate.getDay();
@@ -80,7 +94,7 @@ export const createOvertimeRequest = async (req: Request, res: Response) => {
       data: {
         employeeId,
         date: overtimeDate,
-        startTime: start,
+        startTime: start, // Auto-calculated from work schedule
         endTime: end,
         totalHours,
         overtimePay,

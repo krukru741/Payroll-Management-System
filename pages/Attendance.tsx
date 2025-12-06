@@ -44,6 +44,8 @@ const Attendance: React.FC = () => {
   
   const { employees } = useData();
   const [showManualModal, setShowManualModal] = useState(false);
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [manualEntry, setManualEntry] = useState({
     employeeId: '',
@@ -52,12 +54,51 @@ const Attendance: React.FC = () => {
     timeOut: '',
     status: 'PRESENT'
   });
+  const [overrideData, setOverrideData] = useState({
+    timeIn: '',
+    timeOut: '',
+    hoursWorked: '',
+    status: 'PRESENT'
+  });
 
   useEffect(() => {
     if (showManualModal && user?.role === 'EMPLOYEE' && user.employeeId) {
         setManualEntry(prev => ({ ...prev, employeeId: user.employeeId! }));
     }
   }, [showManualModal, user]);
+
+  // Auto-calculate hours worked when time-in or time-out changes in override modal
+  useEffect(() => {
+    if (overrideData.timeIn && overrideData.timeOut) {
+      // Parse time strings (HH:MM format)
+      const [inHour, inMinute] = overrideData.timeIn.split(':').map(Number);
+      const [outHour, outMinute] = overrideData.timeOut.split(':').map(Number);
+      
+      // Create date objects for calculation
+      const timeIn = new Date();
+      timeIn.setHours(inHour, inMinute, 0, 0);
+      
+      const timeOut = new Date();
+      timeOut.setHours(outHour, outMinute, 0, 0);
+      
+      // Calculate difference in milliseconds
+      let diffMs = timeOut.getTime() - timeIn.getTime();
+      
+      // Handle cross-midnight scenario (if time-out is before time-in, assume next day)
+      if (diffMs < 0) {
+        diffMs += 24 * 60 * 60 * 1000; // Add 24 hours
+      }
+      
+      // Convert to hours
+      const hours = diffMs / (1000 * 60 * 60);
+      
+      // Update hours worked (round to 2 decimal places)
+      setOverrideData(prev => ({
+        ...prev,
+        hoursWorked: hours.toFixed(2)
+      }));
+    }
+  }, [overrideData.timeIn, overrideData.timeOut]);
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,6 +167,58 @@ const Attendance: React.FC = () => {
     setFilters(prev => ({ ...prev, employeeId: '' }));
   };
 
+  const handleOverrideAttendance = (record: AttendanceRecord) => {
+    setSelectedRecord(record);
+    const timeIn = new Date(record.timeIn).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const timeOut = record.timeOut ? new Date(record.timeOut).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+    setOverrideData({
+      timeIn,
+      timeOut,
+      hoursWorked: record.hoursWorked?.toString() || '',
+      status: record.status
+    });
+    setShowOverrideModal(true);
+  };
+
+  const handleOverrideSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRecord) return;
+
+    try {
+      const [timeInHour, timeInMinute] = overrideData.timeIn.split(':');
+      const timeInDate = new Date(selectedRecord.date);
+      timeInDate.setHours(parseInt(timeInHour), parseInt(timeInMinute), 0, 0);
+
+      let timeOutDate = null;
+      if (overrideData.timeOut) {
+        const [timeOutHour, timeOutMinute] = overrideData.timeOut.split(':');
+        timeOutDate = new Date(selectedRecord.date);
+        timeOutDate.setHours(parseInt(timeOutHour), parseInt(timeOutMinute), 0, 0);
+      }
+
+      const payload = {
+        timeIn: timeInDate.toISOString(),
+        timeOut: timeOutDate?.toISOString(),
+        hoursWorked: parseFloat(overrideData.hoursWorked) || 0,
+        status: overrideData.status
+      };
+
+      console.log('Sending override data:', payload);
+      console.log('Override data from form:', overrideData);
+
+      const response = await api.put(`/attendance/${selectedRecord.id}/override`, payload);
+      
+      console.log('Override response:', response.data);
+
+      alert('Attendance record updated successfully!');
+      setShowOverrideModal(false);
+      fetchAttendance();
+    } catch (err: any) {
+      console.error('Override error:', err);
+      alert(err.response?.data?.error || 'Failed to update attendance record');
+    }
+  };
+
   // For employees, always show their records
   if (user?.role === 'EMPLOYEE') {
     return (
@@ -160,9 +253,6 @@ const Attendance: React.FC = () => {
                 <Filter size={14} />
               </Button>
             </div>
-            <Button size="sm" onClick={() => setShowManualModal(true)} className="flex items-center gap-2">
-              <Plus size={14} /> <span className="hidden sm:inline">Manual Entry</span>
-            </Button>
           </div>
         </div>
 
@@ -472,16 +562,17 @@ const Attendance: React.FC = () => {
                     <th className="py-2 px-3 text-[10px] font-semibold text-gray-500 uppercase">Time Out</th>
                     <th className="py-2 px-3 text-[10px] font-semibold text-gray-500 uppercase text-center">Hours</th>
                     <th className="py-2 px-3 text-[10px] font-semibold text-gray-500 uppercase text-center">Status</th>
+                    <th className="py-2 px-3 text-[10px] font-semibold text-gray-500 uppercase text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {loading ? (
                     <tr>
-                      <td colSpan={5} className="py-4 text-center text-xs text-gray-500">Loading attendance records...</td>
+                      <td colSpan={6} className="py-4 text-center text-xs text-gray-500">Loading attendance records...</td>
                     </tr>
                   ) : attendance.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-4 text-center text-xs text-gray-500">No attendance records found for this period.</td>
+                      <td colSpan={6} className="py-4 text-center text-xs text-gray-500">No attendance records found for this period.</td>
                     </tr>
                   ) : (
                     attendance.map((record) => (
@@ -505,6 +596,11 @@ const Attendance: React.FC = () => {
                               record.status === 'ABSENT' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
                             {record.status}
                           </span>
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          <Button size="sm" variant="ghost" onClick={() => handleOverrideAttendance(record)}>
+                            Override
+                          </Button>
                         </td>
                       </tr>
                     ))
@@ -582,6 +678,88 @@ const Attendance: React.FC = () => {
               <div className="flex justify-end gap-2 mt-6">
                 <Button type="button" variant="ghost" onClick={() => setShowManualModal(false)}>Cancel</Button>
                 <Button type="submit">Save Record</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Override Attendance Modal */}
+      {showOverrideModal && selectedRecord && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Override Attendance</h3>
+              <button onClick={() => setShowOverrideModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleOverrideSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Employee</label>
+                <input 
+                  type="text" 
+                  value={`${selectedRecord.employee.lastName}, ${selectedRecord.employee.firstName}`}
+                  disabled 
+                  className="w-full text-sm border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Date</label>
+                <input 
+                  type="text" 
+                  value={new Date(selectedRecord.date).toLocaleDateString()}
+                  disabled 
+                  className="w-full text-sm border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Time In</label>
+                  <input 
+                    type="time"
+                    required
+                    className="w-full text-sm border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    value={overrideData.timeIn}
+                    onChange={e => setOverrideData({...overrideData, timeIn: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Time Out</label>
+                  <input 
+                    type="time"
+                    className="w-full text-sm border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    value={overrideData.timeOut}
+                    onChange={e => setOverrideData({...overrideData, timeOut: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Hours Worked</label>
+                <input 
+                  type="number"
+                  step="0.01"
+                  className="w-full text-sm border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  value={overrideData.hoursWorked}
+                  onChange={e => setOverrideData({...overrideData, hoursWorked: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                <select 
+                  className="w-full text-sm border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  value={overrideData.status}
+                  onChange={e => setOverrideData({...overrideData, status: e.target.value})}
+                >
+                  <option value="PRESENT">Present</option>
+                  <option value="LATE">Late</option>
+                  <option value="ABSENT">Absent</option>
+                  <option value="HALF_DAY">Half Day</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button type="button" variant="ghost" onClick={() => setShowOverrideModal(false)}>Cancel</Button>
+                <Button type="submit">Save Changes</Button>
               </div>
             </form>
           </div>
@@ -678,16 +856,17 @@ const Attendance: React.FC = () => {
                 <th className="py-2 px-3 text-[10px] font-semibold text-gray-500 uppercase">Time Out</th>
                 <th className="py-2 px-3 text-[10px] font-semibold text-gray-500 uppercase text-center">Hours</th>
                 <th className="py-2 px-3 text-[10px] font-semibold text-gray-500 uppercase text-center">Status</th>
+                <th className="py-2 px-3 text-[10px] font-semibold text-gray-500 uppercase text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-4 text-center text-xs text-gray-500">Loading attendance records...</td>
+                  <td colSpan={7} className="py-4 text-center text-xs text-gray-500">Loading attendance records...</td>
                 </tr>
               ) : attendance.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-4 text-center text-xs text-gray-500">No attendance records found for this period.</td>
+                  <td colSpan={7} className="py-4 text-center text-xs text-gray-500">No attendance records found for this period.</td>
                 </tr>
               ) : (
                 attendance.map((record) => (
@@ -714,6 +893,11 @@ const Attendance: React.FC = () => {
                           record.status === 'ABSENT' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
                         {record.status}
                       </span>
+                    </td>
+                    <td className="py-2 px-3 text-center">
+                      <Button size="sm" variant="ghost" onClick={() => handleOverrideAttendance(record)}>
+                        Override
+                      </Button>
                     </td>
                   </tr>
                 ))
@@ -803,6 +987,88 @@ const Attendance: React.FC = () => {
               <div className="flex justify-end gap-2 mt-6">
                 <Button type="button" variant="ghost" onClick={() => setShowManualModal(false)}>Cancel</Button>
                 <Button type="submit">Save Record</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Override Attendance Modal */}
+      {showOverrideModal && selectedRecord && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Override Attendance</h3>
+              <button onClick={() => setShowOverrideModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleOverrideSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Employee</label>
+                <input 
+                  type="text" 
+                  value={`${selectedRecord.employee.lastName}, ${selectedRecord.employee.firstName}`}
+                  disabled 
+                  className="w-full text-sm border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Date</label>
+                <input 
+                  type="text" 
+                  value={new Date(selectedRecord.date).toLocaleDateString()}
+                  disabled 
+                  className="w-full text-sm border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Time In</label>
+                  <input 
+                    type="time"
+                    required
+                    className="w-full text-sm border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    value={overrideData.timeIn}
+                    onChange={e => setOverrideData({...overrideData, timeIn: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Time Out</label>
+                  <input 
+                    type="time"
+                    className="w-full text-sm border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    value={overrideData.timeOut}
+                    onChange={e => setOverrideData({...overrideData, timeOut: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Hours Worked</label>
+                <input 
+                  type="number"
+                  step="0.01"
+                  className="w-full text-sm border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  value={overrideData.hoursWorked}
+                  onChange={e => setOverrideData({...overrideData, hoursWorked: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                <select 
+                  className="w-full text-sm border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  value={overrideData.status}
+                  onChange={e => setOverrideData({...overrideData, status: e.target.value})}
+                >
+                  <option value="PRESENT">Present</option>
+                  <option value="LATE">Late</option>
+                  <option value="ABSENT">Absent</option>
+                  <option value="HALF_DAY">Half Day</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button type="button" variant="ghost" onClick={() => setShowOverrideModal(false)}>Cancel</Button>
+                <Button type="submit">Save Changes</Button>
               </div>
             </form>
           </div>

@@ -142,8 +142,53 @@ export const clockOut = async (req: Request, res: Response) => {
       }
     });
 
+    // Auto-complete approved overtime requests for this day
+    const overtimeRequests = await prisma.overtimeRequest.findMany({
+      where: {
+        employeeId,
+        date: {
+          gte: startOfDay,
+          lte: endOfDay
+        },
+        status: 'APPROVED',
+        endTime: null // Only complete overtime that hasn't ended yet
+      },
+      include: {
+        employee: true
+      }
+    });
+
+    // Complete each overtime request
+    for (const overtime of overtimeRequests) {
+      const overtimeStart = new Date(overtime.startTime);
+      const overtimeEnd = timeOut;
+      
+      // Calculate overtime hours
+      const overtimeDiffMs = overtimeEnd.getTime() - overtimeStart.getTime();
+      const overtimeHours = overtimeDiffMs / (1000 * 60 * 60);
+      
+      // Calculate overtime pay
+      const hourlyRate = overtime.employee.ratePerHour || 0;
+      const overtimeRate = overtime.overtimeRate || 1.25;
+      const overtimePay = overtimeHours * hourlyRate * overtimeRate;
+
+      // Update overtime request
+      await prisma.overtimeRequest.update({
+        where: { id: overtime.id },
+        data: {
+          endTime: overtimeEnd,
+          totalHours: overtimeHours,
+          overtimePay: overtimePay
+        }
+      });
+
+      console.log(`✅ Auto-completed overtime request ${overtime.id} for employee ${employeeId}`);
+      console.log(`   Hours: ${overtimeHours.toFixed(2)}, Pay: ₱${overtimePay.toFixed(2)}`);
+    }
+
     res.json(updated);
   } catch (error) {
+    console.error('Clock out error:', error);
     res.status(500).json({ error: 'Failed to clock out' });
   }
 };
@@ -275,5 +320,62 @@ export const createAttendance = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Create attendance error:', error);
     res.status(500).json({ error: 'Failed to create attendance record' });
+  }
+};
+
+// Override/edit an existing attendance record (admin only)
+export const overrideAttendance = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { timeIn, timeOut, hoursWorked, status } = req.body;
+
+    console.log('Override request:', { id, timeIn, timeOut, hoursWorked, status });
+
+    // Validate required fields
+    if (!timeIn) {
+      return res.status(400).json({ error: 'Time in is required' });
+    }
+
+    // Check if attendance record exists
+    const existingRecord = await prisma.attendance.findUnique({
+      where: { id }
+    });
+
+    if (!existingRecord) {
+      return res.status(404).json({ error: 'Attendance record not found' });
+    }
+
+    // Parse hoursWorked properly
+    const parsedHours = hoursWorked !== undefined && hoursWorked !== null && hoursWorked !== '' 
+      ? parseFloat(hoursWorked) 
+      : 0;
+
+    console.log('Parsed hours:', parsedHours);
+
+    // Update the attendance record
+    const updatedAttendance = await prisma.attendance.update({
+      where: { id },
+      data: {
+        timeIn: new Date(timeIn),
+        timeOut: timeOut ? new Date(timeOut) : null,
+        hoursWorked: parsedHours,
+        status: status || 'PRESENT'
+      },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    });
+
+    console.log('Updated attendance:', updatedAttendance);
+    res.json(updatedAttendance);
+  } catch (error) {
+    console.error('Override attendance error:', error);
+    res.status(500).json({ error: 'Failed to override attendance record' });
   }
 };
